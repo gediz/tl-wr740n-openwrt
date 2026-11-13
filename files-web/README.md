@@ -3,7 +3,7 @@
 
 A small web page and JSON API for the TL-WR740N bench router. The server is busybox httpd; everything else is POSIX sh CGI scripts that call uci, wifi, tc, swconfig, mdio, sysupgrade, logread, iw, ping and firstboot. No LuCI, uhttpd, rpcd or Lua.
 
-This directory is a files overlay, like ../files-bench. `../build/prepare-files.sh` copies it on top of files-bench (leave it out with `NO_WEB=1`) and fills in `@WIFI_SSID@`. This README is not part of the overlay: the script deletes it after copying.
+This directory is a files overlay, like ../files-bench. `../build/prepare-files.sh` copies it on top of files-bench (leave it out with `NO_WEB=1`) and fills in `@WIFI_SSID@` and `@WIFI_KEY@`. This README is not part of the overlay: the script deletes it after copying.
 
 ## What is in the overlay
 
@@ -100,7 +100,7 @@ curl $A -d 'profile=wpa3&channel=6' $R/cgi-bin/wifi
 
 `profile`: `off`, `open`, `wpa2` (psk2), `wpa3` (sae, PMF required), `mixed` (sae-mixed, PMF optional), `ft-psk`, `ft-sae` (802.11r), `owe`. `channel`: 1 to 13, optional (unchanged if left out; set to 1 if the radio says `auto`, since ACS is not built).
 
-The script replaces the uci section `wireless.bench` on the radio, disables any other wifi-iface on that radio, commits and runs `wifi reload`. GET reports the profile stored in /etc/benchweb/profile. 99-bench puts the first-boot AP in `wireless.bench` and writes `open` there, so GET shows `open` from the first boot. On a keep-settings upgrade from a config that has the AP in `wireless.default_radio0`, 99-bench renames that section to `bench` and writes the profile, unless a `bench` section already exists. Profile `off` deletes `bench`, so it is not kept: after a keep-settings upgrade the radio comes back on with the open AP and profile `open`. Apply `off` again after the upgrade if it is wanted. SSID, key and mobility domain come from /etc/benchweb/wifi.conf (created at first boot with a random 16 hex character key; edit it over SSH, then apply a profile again). The key is not shown by the API.
+The script replaces the uci section `wireless.bench` on the radio, disables any other wifi-iface on that radio, commits and runs `wifi reload`. GET reports the profile stored in /etc/benchweb/profile. 99-bench puts the first-boot AP in `wireless.bench` and writes its profile there (`wpa2`, or `open` with `WIFI_OPEN=1`), so GET shows it from the first boot. On a keep-settings upgrade from a config that has the AP in `wireless.default_radio0`, 99-bench renames that section to `bench` and writes the profile, unless a `bench` section already exists. Profile `off` deletes `bench`, so it is not kept: after a keep-settings upgrade the radio comes back on with the first-boot AP and its profile. Apply `off` again after the upgrade if it is wanted. SSID, key and mobility domain come from /etc/benchweb/wifi.conf (created at first boot with the build's `WIFI_KEY`, or a random 16 hex character key if none was given; edit it over SSH, then apply a profile again). The key is not shown by the API.
 
 ### GET, POST /cgi-bin/netem
 
@@ -181,7 +181,7 @@ curl $A -d confirm=yes $R/cgi-bin/reset
 {"ok":true,"resetting":true}
 ```
 
-Factory reset. Needs `confirm=yes` (anything else: 400) and passes the same client, Host and Origin checks as every other CGI. Takes the lock, logs, replies, then 2 s later runs `firstboot -y && reboot`. firstboot deletes every file in the overlay (the writable part of the flash); the read-only image is not touched. At the next boot the first-boot scripts run again: 99-bench sets the LAN address, key-only SSH (authorized_keys is in the image) and the open bench Wi-Fi on channel 1 (section `wireless.bench`, profile `open`), and 90-benchweb makes a new web password, Wi-Fi key and web.conf. The SSH host keys are new too, so SSH clients warn about a changed host key. Everything set over SSH or the API since the last flash is lost, including logs.
+Factory reset. Needs `confirm=yes` (anything else: 400) and passes the same client, Host and Origin checks as every other CGI. Takes the lock, logs, replies, then 2 s later runs `firstboot -y && reboot`. firstboot deletes every file in the overlay (the writable part of the flash); the read-only image is not touched. At the next boot the first-boot scripts run again: 99-bench sets the LAN address, key-only SSH (authorized_keys is in the image) and the first-boot Wi-Fi on channel 1 (section `wireless.bench`, profile `wpa2`, or `open` with `WIFI_OPEN=1`), and 90-benchweb makes a new web password, the Wi-Fi key and web.conf. The SSH host keys are new too, so SSH clients warn about a changed host key. Everything set over SSH or the API since the last flash is lost, including logs.
 
 ### GET /cgi-bin/backup
 

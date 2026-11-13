@@ -9,14 +9,14 @@ C=${CONTAINER:-owrt-src-malta}; J=${JOBS:-$(nproc)}
 O=$Q/images-web
 docker start $C >/dev/null
 # overlay: files-bench + files-web (without its README) + test-only malta upgrade hooks
-$Q/../build/prepare-files.sh $Q/src/files
+WIFI_OPEN=${WIFI_OPEN:-1} $Q/../build/prepare-files.sh $Q/src/files
 cp -a $Q/files-malta-test/. $Q/src/files/
 chmod -R go-w $Q/src/files
 cp $Q/diffconfig-malta-web.txt $Q/src/.config
 docker exec $C bash -c "cd /src && make defconfig && make package/busybox/clean && make -j$J" 2>&1 | tail -5
 # back to the plain setup (build.sh state): files-bench only, busybox rebuilt on next plain build
 docker exec $C bash -c 'cd /src && make package/busybox/clean' >/dev/null
-NO_WEB=1 $Q/../build/prepare-files.sh $Q/src/files
+NO_WEB=1 WIFI_OPEN=${WIFI_OPEN:-1} $Q/../build/prepare-files.sh $Q/src/files
 cp $Q/diffconfig-malta.txt $Q/src/.config
 B=$Q/src/bin-web/targets/malta/be
 mkdir -p $O

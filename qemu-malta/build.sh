@@ -13,7 +13,7 @@ docker inspect --type container $C >/dev/null 2>&1 || \
 docker start $C >/dev/null
 docker exec $C bash -c 'cd /src && ./scripts/feeds update -a && ./scripts/feeds install -a'
 git -C $Q/src apply --check $Q/malta-source.patch 2>/dev/null && git -C $Q/src apply $Q/malta-source.patch
-NO_WEB=1 $Q/../build/prepare-files.sh $Q/src/files
+NO_WEB=1 WIFI_OPEN=${WIFI_OPEN:-1} $Q/../build/prepare-files.sh $Q/src/files
 chmod -R go-w $Q/src/package $Q/src/target
 cp $Q/diffconfig-malta.txt $Q/src/.config
 docker exec $C bash -c "cd /src && make defconfig && make -j$J download && make -j$J"

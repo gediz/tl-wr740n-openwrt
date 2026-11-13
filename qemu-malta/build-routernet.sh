@@ -24,7 +24,7 @@ mkdir -p $O
 restore() {  # back to the plain setup (build-web.sh end state); runs on any exit
   cp $PLAIN $CD
   docker exec $C bash -c 'cd /src && make target/linux/clean package/kernel/linux/clean package/kernel/mac80211/clean package/feeds/packages/mdio-netlink/clean package/busybox/clean' >/dev/null 2>&1
-  NO_WEB=1 $Q/../build/prepare-files.sh $Q/src/files >/dev/null
+  NO_WEB=1 WIFI_OPEN=${WIFI_OPEN:-1} $Q/../build/prepare-files.sh $Q/src/files >/dev/null
   cp $Q/diffconfig-malta.txt $Q/src/.config
   md5sum $CD $Q/src/.config
 }
@@ -35,7 +35,7 @@ trap restore EXIT
   sed -n '/^# Round 2/,/^# Round 3/p' $T | grep -E 'CONFIG_(ETHTOOL_NETLINK|SYN_COOKIES)[ =]'
 } > $O/config-default
 cp $O/config-default $CD
-$Q/../build/prepare-files.sh $Q/src/files
+WIFI_OPEN=${WIFI_OPEN:-1} $Q/../build/prepare-files.sh $Q/src/files
 cp -a $Q/files-malta-test/. $Q/src/files/
 chmod -R go-w $Q/src/files
 sed 's#^CONFIG_BINARY_FOLDER=.*#CONFIG_BINARY_FOLDER="/src/bin-routernet"#' $Q/diffconfig-malta-web.txt > $O/diffconfig

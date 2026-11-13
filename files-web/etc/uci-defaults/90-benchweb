@@ -11,7 +11,7 @@ rnd() { hexdump -n $1 -e "$1/1 \"%02x\"" /dev/urandom; }
 # Used by POST /cgi-bin/wifi. Edit, then apply a profile again.
 radio=radio0
 ssid=@WIFI_SSID@
-key=$(rnd 8)
+key=$(k='@WIFI_KEY@'; [ -n "$k" ] && echo "$k" || rnd 8)
 mobility_domain=4f57
 X
 [ -e $D/web.conf ] || cat > $D/web.conf <<X

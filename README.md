@@ -14,7 +14,7 @@ No firmware images, flash dumps or calibration data are in this repository. You 
 
 ath9k with WPA2, WPA3-SAE, 802.11r and OWE (hostapd, AP only), dropbear with ed25519 and RSA keys (key-only login), `tc` with netem, `iperf3`, `tcpdump-mini`, `ethtool`, `mdio-tools`, dnsmasq, and a web UI on busybox httpd. No firewall, no IPv6, no opkg, no LuCI (it does not fit). Kernel plus rootfs end 4,158 bytes under the 3,669,504-byte limit; the writable overlay is 324 KiB.
 
-It was made for a test bench: an open first-boot SSID, no firewall, no PPPoE. Do not put it on the internet as your home router.
+It was made for a test bench: a first-boot Wi-Fi AP bridged into the LAN (WPA2 with your `WIFI_KEY`), no firewall, no PPPoE. Do not put it on the internet as your home router.
 
 ## Layout
 
@@ -22,7 +22,7 @@ It was made for a test bench: an open first-boot SSID, no firewall, no PPPoE. Do
 |---|---|
 | `build/` | `build.sh` (clone OpenWrt v24.10.8, patch, build in Docker), `diffconfig.txt`, `kernel-trim.config`, `openwrt-source.patch`, `packages.txt`, `prepare-files.sh` (assembles the files overlay), `measure.sh` / `step.sh` / `ablate.sh` / `probe-web.sh` (size measurements), `seeds/` (configs of the measured steps) |
 | `tools/` | `dtbcheck.py` (does every device-tree node of a trimmed kernel still have a driver?), `imgcheck.py` (TP-Link header, product id, overlay markers, `vlan_filtering` present) |
-| `files-bench/` | first-boot defaults: LAN address, hostname, key-only SSH, open AP on channel 1, `authorized_keys` placeholder |
+| `files-bench/` | first-boot defaults: LAN address, hostname, key-only SSH, WPA2 AP on channel 1 (open only with `WIFI_OPEN=1`), `authorized_keys` placeholder |
 | `files-web/` | the web UI and JSON API (busybox httpd + POSIX sh CGIs); API reference in its README |
 | `recovery/` | `recovery-flash.sh` (U-Boot TFTP recovery server with checks), `make-recovery-image.sh` (cut your recovery image from your dump) |
 | `qemu-malta/` | QEMU test of the same userspace on OpenWrt's malta/be target, with hwsim Wi-Fi; see its README |
@@ -34,6 +34,7 @@ You need Linux, Docker, git and about 15 GB of disk. The build runs as the `ubun
 
 ```sh
 export AUTHORIZED_KEYS=~/.ssh/id_ed25519.pub   # required: the image allows key-only SSH
+export WIFI_KEY=ChooseYourOwnKey42              # required: WPA2 key, 8 to 63 letters or digits
 export WIFI_COUNTRY=DE                          # your country code
 cd build && ./build.sh
 ./measure.sh final                              # sizes and margin
@@ -49,7 +50,9 @@ Overlay values come from the environment (see `build/prepare-files.sh`):
 |---|---|---|
 | `LAN_IP` | 192.168.1.1 | LAN address (/24) |
 | `ROUTER_HOSTNAME` | wr740n | hostname, web page title |
-| `WIFI_SSID` | wr740n | SSID of the open first-boot AP and the web UI's Wi-Fi profiles |
+| `WIFI_SSID` | wr740n | SSID of the first-boot AP and the web UI's Wi-Fi profiles |
+| `WIFI_KEY` | (required) | WPA2 key of the first-boot AP and the web UI's profiles, 8 to 63 letters/digits. It is stored in the image, so do not share an image built with your key. |
+| `WIFI_OPEN` | 0 | 1 builds an open first-boot AP instead (anyone in range is on your LAN). Only for an isolated bench. |
 | `WIFI_COUNTRY` | US | regulatory domain. Set your own |
 | `AUTHORIZED_KEYS` | none | SSH public key file. The build stops without one |
 | `NO_WEB=1` | | leave the web UI out |

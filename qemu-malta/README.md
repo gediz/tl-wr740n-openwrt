@@ -15,7 +15,7 @@ export SSH_KEY=~/.ssh/id_ed25519                # the matching private key, moun
 ./run-web.sh 32             # tests-web.sh, about 15 min
 ```
 
-If you build with non-default overlay values (`LAN_IP`, `ROUTER_HOSTNAME`, `WIFI_SSID`, `WIFI_COUNTRY`), export the same values for the `run-*.sh` scripts: the tests check them. `SSH_KEY_RSA` (default `~/.ssh/id_rsa`) is optional; without it the RSA login test reports SKIP. For it to pass, the RSA public key must also be in `AUTHORIZED_KEYS`.
+The QEMU build scripts set `WIFI_OPEN=1` unless you set it: the tests associate a client to the first-boot AP inside the VM's private network, and the open AP needs no shared key. If you build with non-default overlay values (`LAN_IP`, `ROUTER_HOSTNAME`, `WIFI_SSID`, `WIFI_COUNTRY`), export the same values for the `run-*.sh` scripts: the tests check them. `SSH_KEY_RSA` (default `~/.ssh/id_rsa`) is optional; without it the RSA login test reports SKIP. For it to pass, the RSA public key must also be in `AUTHORIZED_KEYS`.
 
 ## Pre-flash check: routernet
 

@@ -31,7 +31,9 @@ NAME=wr740nv5_tp_recovery.bin
 SIZE=3932160                       # 0x3c0000
 ID=${PRODUCT_ID:-0740000500000001}
 BLOCKS=$((SIZE / 512))             # 512-byte TFTP data blocks (plus one empty final block)
-RUN=${TMPDIR:-/tmp}/wr740n-recovery
+RUN_BASE=${TMPDIR:-/tmp}/wr740n-recovery
+RUN="$RUN_BASE.XXXXXX"              # made private with mktemp -d in step 2
+DNSMASQ_PID=; TCPDUMP_PID=
 WAIT_REQ=${WAIT_REQ:-600}          # seconds to wait for the router to ask for the file
 WAIT_WRITE=${WAIT_WRITE:-150}      # seconds after the transfer for erase + write + restart
 WAIT_BOOT=${WAIT_BOOT:-300}        # seconds for --check-ip to answer after that
@@ -79,8 +81,13 @@ nm_give_back() {
   S nmcli device set "$IF" managed yes; NM_OFF=0
 }
 tftp_stop() {
-  [ -f "$RUN/tcpdump.pid" ] && { S kill "$(cat "$RUN/tcpdump.pid")" 2>/dev/null; rm -f "$RUN/tcpdump.pid"; }
-  [ -f "$RUN/dnsmasq.pid" ] && { S kill "$(cat "$RUN/dnsmasq.pid")" 2>/dev/null; S rm -f "$RUN/dnsmasq.pid"; }
+  # Kill only what this run started: tcpdump by $!, dnsmasq by its pid file in the private run dir.
+  [ -n "$TCPDUMP_PID" ] && { S kill "$TCPDUMP_PID" 2>/dev/null; TCPDUMP_PID=; }
+  [ -n "$DNSMASQ_PID" ] && { S kill "$DNSMASQ_PID" 2>/dev/null; DNSMASQ_PID=; }
+  if [ $CLEANUP = 1 ]; then   # leftovers of a run that was killed: match our exact command lines
+    S pkill -f -- "--tftp-root=$RUN_BASE\\.[A-Za-z0-9]{6}/tftp" 2>/dev/null
+    S pkill -f -- "tcpdump -l -n -U -i $IF host $RTR or arp" 2>/dev/null
+  fi
   if [ $FW_RULE = 1 ] || [ $CLEANUP = 1 ]; then
     while sudo iptables -C INPUT -i "$IF" -s $RTR -d $SRV -p udp -j ACCEPT 2>/dev/null; do
       S iptables -D INPUT -i "$IF" -s $RTR -d $SRV -p udp -j ACCEPT; done
@@ -153,7 +160,10 @@ fi
 
 say "step 2: TFTP on $SRV only (dnsmasq, no DNS, no DHCP), serving the file as $NAME"
 if [ $DRY = 0 ]; then
-  mkdir -p "$RUN/tftp"; chmod 755 "$RUN" "$RUN/tftp"
+  # Private run directory: only this user can create files in it (0711), so nothing can be planted
+  # next to the image. The tftp/ folder and the image stay readable for dnsmasq's unprivileged user.
+  RUN=$(mktemp -d "$RUN_BASE.XXXXXX") || die "mktemp failed"
+  mkdir "$RUN/tftp" && chmod 711 "$RUN" && chmod 755 "$RUN/tftp" || die "cannot set up $RUN"
   cp "$FILE" "$RUN/tftp/$NAME"; chmod 644 "$RUN/tftp/$NAME"
   [ "$(sha256sum < "$RUN/tftp/$NAME" | cut -d' ' -f1)" = "$sha" ] || die "copy in $RUN/tftp does not match"
   : > "$RUN/dnsmasq.log"; : > "$RUN/tcpdump.txt"
@@ -161,9 +171,11 @@ if [ $DRY = 0 ]; then
     --port=0 --no-resolv --no-hosts --enable-tftp --tftp-root="$RUN/tftp" --listen-address=$SRV --bind-interfaces \
     --pid-file="$RUN/dnsmasq.pid" >>"$RUN/dnsmasq.log" 2>&1 &
   sudo tcpdump -l -n -U -i "$IF" "host $RTR or arp" >>"$RUN/tcpdump.txt" 2>"$RUN/tcpdump.err" &
-  echo $! > "$RUN/tcpdump.pid"
+  TCPDUMP_PID=$!
   for i in $(seq 1 10); do ss -Huln "sport = :69" | grep -q "$SRV:69 " && break; sleep 1; done
   ss -Huln "sport = :69" | grep -q "$SRV:69 " || { cat "$RUN/dnsmasq.log"; die "TFTP server did not start"; }
+  # setsid may fork, so $! is not dnsmasq; its pid file is safe to read here because $RUN is private.
+  DNSMASQ_PID=$(sudo cat "$RUN/dnsmasq.pid" 2>/dev/null); case $DNSMASQ_PID in ''|*[!0-9]*) DNSMASQ_PID= ;; esac
   say "TFTP listening on $SRV:69"
 else
   echo "  [dry-run] would copy the file to $RUN/tftp/$NAME and start: sudo dnsmasq --port=0 --enable-tftp --listen-address=$SRV --bind-interfaces ..."
