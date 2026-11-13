@@ -1,0 +1,19 @@
+#!/bin/sh
+. /usr/lib/benchweb.sh
+need POST; cl; raw
+[ "$L" -gt 0 ] || bad 'empty body'
+[ "$L" -le 262144 ] || { drain; bad 'body too large (max 262144)'; }
+lock
+f=/tmp/restore.tgz
+rbody $f
+[ "$(wc -c < $f)" = "$L" ] || { rm -f $f; bad 'short body'; }
+n=$(tar -tzf $f 2>&1) && v=$(tar -tvzf $f 2>/dev/null) || { rm -f $f; bad 'not a tar.gz'; }
+# only regular files and directories under etc/: no links, devices, absolute paths or .. (tar warnings count as names)
+echo "$n" | grep -q '^etc/' && ! echo "$n" | grep -qv '^etc/' && ! echo "$n" | grep -qE '(^|/)\.\.(/|$)' \
+	&& ! echo "$v" | grep -qv '^[-d]' && ! echo "$v" | grep -q ' -> ' \
+	|| { rm -f $f; bad 'archive must contain only regular files and directories under etc/'; }
+sysupgrade -r $f >/dev/null 2>&1 || { rm -f $f; err '500 Internal Server Error' 'restore failed, some files may be written: restore again or reboot'; }
+rm -f $f
+audit "restored $(echo "$n" | wc -l) files, rebooting"
+hdr '200 OK'; echo '{"ok":true,"rebooting":true}'
+later reboot

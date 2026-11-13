@@ -1,0 +1,38 @@
+#!/bin/sh
+. /usr/lib/benchweb.sh
+need POST; cl
+f=/tmp/fw.bin
+T=/tmp/benchweb.fw
+if [ "$CONTENT_TYPE" != application/octet-stream ]; then
+	case "$CONTENT_TYPE" in multipart/*) drain; bad 'send the raw image as application/octet-stream, not multipart';; esac
+	form
+	[ "$(arg confirm)" = 1 ] || bad 'upload with Content-Type: application/octet-stream, or confirm=1&sha256=...'
+	case "$(arg keep)" in ''|1) o=;; 0) o=-n;; *) bad keep;; esac
+	s=$(arg sha256)
+	case "$s" in *[!0-9a-f]*) bad sha256;; esac
+	[ ${#s} = 64 ] || bad 'sha256 of the uploaded image required'
+	lock
+	[ -s $f ] || err '409 Conflict' 'upload an image first'
+	[ "$(sha256sum $f | cut -d' ' -f1)" = "$s" ] || err '409 Conflict' 'sha256 does not match the uploaded image'
+	sysupgrade -T $f >/dev/null 2>&1 || { rm -f $f; err '409 Conflict' 'image check failed'; }
+	audit "flashing $(wc -c < $f) bytes sha256 $s ${o:-keep settings}"
+	hdr '200 OK'; printf '{"ok":true,"upgrading":true,"keep_settings":%s}\n' "$([ -z "$o" ] && echo true || echo false)"
+	later sysupgrade $o $f
+	exit 0
+fi
+[ -z "$QUERY_STRING" ] || { drain; bad 'unknown parameter'; }
+[ "$L" -gt 0 ] || bad 'empty body'
+[ "$L" -le 4194304 ] || { drain; bad 'image too large (max 4194304)'; }
+lock
+[ -f $T ] && stop "$(cat $T)"; rm -f $f $T
+m=$(memavail); n=$(conf web.conf min_mem_kb 6144)
+[ "$m" -ge "$n" ] || { drain; err '507 Insufficient Storage' "MemAvailable ${m} kB < ${n} kB"; }
+rbody $f
+[ "$(wc -c < $f)" = "$L" ] || { rm -f $f; bad 'short body'; }
+t=$(sysupgrade -T $f 2>&1) || { rm -f $f; bad "$(js "image check failed: $(echo "$t" | tail -n 2)")"; }
+# the image is 4 MB of RAM: delete it if not flashed within image_keep_s (web.conf, default 600)
+k=$(conf web.conf image_keep_s 600)
+job after $k rm -f $f $T; echo $! > $T
+s=$(sha256sum $f | cut -d' ' -f1)
+audit "image ok $L bytes sha256 $s"
+ok "{\"ok\":true,\"test\":\"passed\",\"size\":$L,\"sha256\":\"$s\",\"keep_s\":$k,\"next\":\"POST /cgi-bin/upgrade?confirm=1&sha256=$s\"}"

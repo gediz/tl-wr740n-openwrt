@@ -1,0 +1,7 @@
+#!/bin/sh
+. /usr/lib/benchweb.sh
+need GET; form
+n=$(arg n)
+num "${n:=100}" 10 500 || bad n
+# one JSON string per line; control and non-ASCII bytes dropped
+ok "[$(logread -l $n | tr -d '\000-\011\013-\037\177-\377' | awk '{gsub(/[\\"]/, "\\\\&"); printf "%s\"%s\"", (NR > 1 ? "," : ""), $0}')]"

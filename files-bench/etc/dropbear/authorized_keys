@@ -1,0 +1,4 @@
+# Placeholder. Put your own SSH public key(s) here, one per line, or set
+# AUTHORIZED_KEYS=/path/to/your_key.pub when you run build/build.sh.
+# The image allows key-only SSH: build/prepare-files.sh refuses to build an
+# image without a key, because you could not log in to it.

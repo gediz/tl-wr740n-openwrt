@@ -1,0 +1,101 @@
+{
+	"model": {
+		"id": "tplink,tl-wr740n-v5"
+	},
+	"led": {
+		"wan": {
+			"name": "WAN",
+			"sysfs": "green:wan",
+			"type": "netdev",
+			"device": "eth1",
+			"mode": "link tx rx"
+		},
+		"lan1": {
+			"name": "LAN1",
+			"sysfs": "green:lan1",
+			"trigger": "switch0",
+			"type": "switch",
+			"mode": "",
+			"port_mask": "0x04",
+			"speed_mask": ""
+		},
+		"lan2": {
+			"name": "LAN2",
+			"sysfs": "green:lan2",
+			"trigger": "switch0",
+			"type": "switch",
+			"mode": "",
+			"port_mask": "0x08",
+			"speed_mask": ""
+		},
+		"lan3": {
+			"name": "LAN3",
+			"sysfs": "green:lan3",
+			"trigger": "switch0",
+			"type": "switch",
+			"mode": "",
+			"port_mask": "0x10",
+			"speed_mask": ""
+		},
+		"lan4": {
+			"name": "LAN4",
+			"sysfs": "green:lan4",
+			"trigger": "switch0",
+			"type": "switch",
+			"mode": "",
+			"port_mask": "0x02",
+			"speed_mask": ""
+		}
+	},
+	"network": {
+		"wan": {
+			"device": "eth1",
+			"protocol": "dhcp"
+		},
+		"lan": {
+			"device": "eth0.1",
+			"protocol": "static"
+		}
+	},
+	"switch": {
+		"switch0": {
+			"enable": true,
+			"reset": true,
+			"ports": [
+				{
+					"num": 0,
+					"device": "eth0",
+					"need_tag": false,
+					"want_untag": false
+				},
+				{
+					"num": 1,
+					"role": "lan",
+					"index": 4
+				},
+				{
+					"num": 2,
+					"role": "lan",
+					"index": 1
+				},
+				{
+					"num": 3,
+					"role": "lan",
+					"index": 2
+				},
+				{
+					"num": 4,
+					"role": "lan",
+					"index": 3
+				}
+			],
+			"roles": [
+				{
+					"role": "lan",
+					"ports": "1 2 3 4 0t",
+					"device": "eth0.1"
+				}
+			]
+		}
+	}
+}

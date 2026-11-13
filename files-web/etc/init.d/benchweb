@@ -1,0 +1,20 @@
+#!/bin/sh /etc/rc.common
+# busybox httpd for the bench web UI on the LAN address. Auth: /etc/benchweb/httpd.conf
+START=80
+USE_PROCD=1
+
+start_service() {
+	local ip=$(uci -q get network.lan.ipaddr)
+	[ -n "$ip" ] && [ -s /etc/benchweb/httpd.conf ] || return 1
+	procd_open_instance
+	# oom_score_adj 1000: under memory pressure (for example a connection flood; httpd has no connection
+	# limit) the kernel kills httpd and its children first, not system daemons. procd respawns httpd.
+	procd_set_param command /bin/sh -c 'echo 1000 >/proc/self/oom_score_adj; exec /usr/sbin/httpd -f -p "$0" -h /www-bench -c /etc/benchweb/httpd.conf -r bench' "${ip%%/*}:80"
+	# the LAN address may not be up yet: retry every 5 s, forever
+	procd_set_param respawn 3600 5 0
+	procd_close_instance
+}
+
+service_triggers() {
+	procd_add_reload_trigger network
+}

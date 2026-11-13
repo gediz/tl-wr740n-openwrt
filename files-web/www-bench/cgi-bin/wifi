@@ -1,0 +1,47 @@
+#!/bin/sh
+. /usr/lib/benchweb.sh
+[ "$REQUEST_METHOD" = GET ] && ok "$(wifi_json)"
+need POST; form
+p=$(arg profile); c=$(arg channel)
+case "$p" in off|open|wpa2|wpa3|mixed|ft-psk|ft-sae|owe) ;; *) bad profile;; esac
+[ -z "$c" ] || num "$c" 1 13 || bad channel
+lock
+r=$(conf wifi.conf radio radio0)
+case "$r" in radio[0-9]) ;; *) err '500 Internal Server Error' 'radio in wifi.conf';; esac
+uci -q get wireless.$r >/dev/null || err '503 Service Unavailable' 'no radio'
+for s in $(uci show wireless | sed -n 's/^wireless\.\([^.=]*\)=wifi-iface$/\1/p'); do
+	[ "$s" = bench ] || [ "$(uci -q get wireless.$s.device)" != $r ] || uci set wireless.$s.disabled=1
+done
+uci -q delete wireless.bench
+if [ $p = off ]; then
+	uci set wireless.$r.disabled=1
+else
+	uci set wireless.$r.disabled=0
+	[ -n "$c" ] && uci set wireless.$r.channel=$c
+	[ "$(uci -q get wireless.$r.channel)" = auto ] && uci set wireless.$r.channel=1
+	k=$(conf wifi.conf key)
+	case $p in open|owe) ;; *) [ ${#k} -ge 8 ] || err '500 Internal Server Error' 'key in wifi.conf too short';; esac
+	uci batch <<-X
+	set wireless.bench=wifi-iface
+	set wireless.bench.device=$r
+	set wireless.bench.mode=ap
+	set wireless.bench.network=lan
+	X
+	uci set wireless.bench.ssid="$(conf wifi.conf ssid @WIFI_SSID@)"
+	case $p in open|owe) ;; *) uci set wireless.bench.key="$k";; esac
+	case $p in
+	open) e=none;; wpa2|ft-psk) e=psk2;; wpa3|ft-sae) e=sae; w=2;; mixed) e=sae-mixed; w=1;; owe) e=owe; w=2;;
+	esac
+	uci set wireless.bench.encryption=$e
+	[ -n "$w" ] && uci set wireless.bench.ieee80211w=$w
+	case $p in ft-*)
+		uci set wireless.bench.ieee80211r=1
+		uci set wireless.bench.mobility_domain="$(conf wifi.conf mobility_domain 4f57)"
+		uci set wireless.bench.ft_psk_generate_local=1;;
+	esac
+fi
+uci commit wireless
+echo $p > $B/profile
+audit "profile=$p channel=$c"
+wifi reload >/dev/null 2>&1
+ok "{\"ok\":true,\"profile\":\"$p\",\"channel\":\"$(uci -q get wireless.$r.channel)\"}"

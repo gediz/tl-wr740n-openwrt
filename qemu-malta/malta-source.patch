@@ -1,0 +1,184 @@
+diff --git a/config/Config-build.in b/config/Config-build.in
+index 1bcd2a7..43d01c2 100644
+--- a/config/Config-build.in
++++ b/config/Config-build.in
+@@ -188,7 +188,8 @@ menu "Global build settings"
+ 		  Packages can opt-out via setting PKG_BUILD_FLAGS:=no-mold
+ 
+ 	config IPV6
+-		def_bool y
++		bool "Enable IPv6 support in packages"
++		default y
+ 
+ 	comment "Stripping options"
+ 
+diff --git a/package/kernel/linux/modules/crypto.mk b/package/kernel/linux/modules/crypto.mk
+index 78c9712..c378c06 100644
+--- a/package/kernel/linux/modules/crypto.mk
++++ b/package/kernel/linux/modules/crypto.mk
+@@ -165,7 +165,7 @@ $(eval $(call KernelPackage,crypto-crc32c))
+ 
+ define KernelPackage/crypto-ctr
+   TITLE:=Counter Mode CryptoAPI module
+-  DEPENDS:=+kmod-crypto-manager +kmod-crypto-seqiv
++  DEPENDS:=+kmod-crypto-manager
+   KCONFIG:=CONFIG_CRYPTO_CTR
+   FILES:=$(LINUX_DIR)/crypto/ctr.ko
+   AUTOLOAD:=$(call AutoLoad,09,ctr)
+diff --git a/package/kernel/linux/modules/netsupport.mk b/package/kernel/linux/modules/netsupport.mk
+index 06ef823..448d55e 100644
+--- a/package/kernel/linux/modules/netsupport.mk
++++ b/package/kernel/linux/modules/netsupport.mk
+@@ -1278,7 +1278,7 @@ $(eval $(call KernelPackage,sctp-diag))
+ define KernelPackage/netem
+   SUBMENU:=$(NETWORK_SUPPORT_MENU)
+   TITLE:=Network emulation functionality
+-  DEPENDS:=+kmod-sched
++  DEPENDS:=+kmod-sched-core
+   KCONFIG:=CONFIG_NET_SCH_NETEM
+   FILES:=$(LINUX_DIR)/net/sched/sch_netem.ko
+   AUTOLOAD:=$(call AutoLoad,99,netem)
+diff --git a/package/libs/mbedtls/Makefile b/package/libs/mbedtls/Makefile
+index 1728d46..b5f44db 100644
+--- a/package/libs/mbedtls/Makefile
++++ b/package/libs/mbedtls/Makefile
+@@ -133,10 +133,11 @@ endef
+ TARGET_CFLAGS := $(filter-out -O%,$(TARGET_CFLAGS))
+ 
+ CMAKE_OPTIONS += \
++	-DCMAKE_BUILD_TYPE=MinSizeRel \
+ 	-DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+ 	-DUSE_SHARED_MBEDTLS_LIBRARY:Bool=ON \
+ 	-DENABLE_TESTING:Bool=OFF \
+-	-DENABLE_PROGRAMS:Bool=ON
++	-DENABLE_PROGRAMS:Bool=OFF
+ 
+ define Build/Prepare
+        $(call Build/Prepare/Default)
+diff --git a/package/network/config/wifi-scripts/files/lib/netifd/wireless/mac80211.sh b/package/network/config/wifi-scripts/files/lib/netifd/wireless/mac80211.sh
+index eea18e8..84fc14d 100755
+--- a/package/network/config/wifi-scripts/files/lib/netifd/wireless/mac80211.sh
++++ b/package/network/config/wifi-scripts/files/lib/netifd/wireless/mac80211.sh
+@@ -1115,7 +1115,7 @@ drv_mac80211_cleanup() {
+ mac80211_reset_config() {
+ 	hostapd_conf_file="/var/run/hostapd-$phy$vif_phy_suffix.conf"
+ 	ubus_call hostapd config_set '{ "phy": "'"$phy"'", "radio": '"$radio"', "config": "", "prev_config": "'"$hostapd_conf_file"'" }' > /dev/null
+-	ubus_call wpa_supplicant config_set '{ "phy": "'"$phy"'", "radio": '"$radio"', "config": [] }' > /dev/null
++	[ -x /usr/sbin/wpa_supplicant ] && ubus_call wpa_supplicant config_set '{ "phy": "'"$phy"'", "radio": '"$radio"', "config": [] }' > /dev/null
+ 	wdev_tool "$phy$phy_suffix" set_config '{}'
+ }
+ 
+diff --git a/package/network/services/dnsmasq/Makefile b/package/network/services/dnsmasq/Makefile
+index 19ae7b7..c47b47b 100644
+--- a/package/network/services/dnsmasq/Makefile
++++ b/package/network/services/dnsmasq/Makefile
+@@ -155,7 +155,7 @@ ifeq ($(BUILD_VARIANT),full)
+ 		$(if $(CONFIG_PACKAGE_dnsmasq_$(BUILD_VARIANT)_tftp),,-DNO_TFTP)
+ 	COPTS += $(if $(CONFIG_LIBNETTLE_MINI),-DNO_GMP,)
+ else
+-	COPTS += -DNO_AUTH -DNO_IPSET -DNO_ID
++	COPTS += -DNO_AUTH -DNO_IPSET -DNO_ID -DNO_TFTP -DNO_LOOP -DNO_INOTIFY -DNO_DUMPFILE
+ endif
+ 
+ MAKE_FLAGS := \
+diff --git a/package/network/services/hostapd/Makefile b/package/network/services/hostapd/Makefile
+index e921b07..326d76c 100644
+--- a/package/network/services/hostapd/Makefile
++++ b/package/network/services/hostapd/Makefile
+@@ -92,12 +92,12 @@ CORE_DEPENDS = +ucode +libucode \
+ OPENSSL_DEPENDS = +PACKAGE_$(1):libopenssl +PACKAGE_$(1):libopenssl-legacy
+ 
+ DRIVER_MAKEOPTS= \
+-	CONFIG_ACS=y CONFIG_DRIVER_NL80211=y \
++	CONFIG_DRIVER_NL80211=y \
+ 	CONFIG_IEEE80211AC=$(HOSTAPD_IEEE80211AC) \
+ 	CONFIG_IEEE80211AX=$(HOSTAPD_IEEE80211AX) \
+ 	CONFIG_IEEE80211BE=$(HOSTAPD_IEEE80211BE) \
+ 	CONFIG_MBO=$(CONFIG_WPA_MBO_SUPPORT) \
+-	CONFIG_UCODE=y CONFIG_APUP=y
++	CONFIG_UCODE=y
+ 
+ ifeq ($(SSL_VARIANT),openssl)
+   DRIVER_MAKEOPTS += CONFIG_TLS=openssl CONFIG_SAE=y
+@@ -131,7 +131,11 @@ endif
+ 
+ ifeq ($(SSL_VARIANT),mbedtls)
+   DRIVER_MAKEOPTS += CONFIG_TLS=mbedtls CONFIG_SAE=y
+-  TARGET_LDFLAGS += -lmbedcrypto -lmbedx509 -lmbedtls
++  ifeq ($(LOCAL_VARIANT),basic)
++    TARGET_LDFLAGS += -lmbedcrypto
++  else
++    TARGET_LDFLAGS += -lmbedcrypto -lmbedx509 -lmbedtls
++  endif
+ 
+   ifeq ($(LOCAL_VARIANT),basic)
+     DRIVER_MAKEOPTS += CONFIG_OWE=y
+diff --git a/package/network/services/hostapd/files/hostapd-basic.config b/package/network/services/hostapd/files/hostapd-basic.config
+index 3d19d8f..ebcebff 100644
+--- a/package/network/services/hostapd/files/hostapd-basic.config
++++ b/package/network/services/hostapd/files/hostapd-basic.config
+@@ -13,7 +13,7 @@
+ #CONFIG_DRIVER_HOSTAP=y
+ 
+ # Driver interface for wired authenticator
+-CONFIG_DRIVER_WIRED=y
++#CONFIG_DRIVER_WIRED=y
+ 
+ # Driver interface for drivers using the nl80211 kernel interface
+ CONFIG_DRIVER_NL80211=y
+@@ -48,7 +48,7 @@ CONFIG_DRIVER_NL80211=y
+ #CONFIG_IAPP=y
+ 
+ # WPA2/IEEE 802.11i RSN pre-authentication
+-CONFIG_RSN_PREAUTH=y
++#CONFIG_RSN_PREAUTH=y
+ 
+ # IEEE 802.11w (management frame protection)
+ #CONFIG_IEEE80211W=y
+@@ -384,7 +384,7 @@ CONFIG_TLS=internal
+ #CONFIG_OWE=y
+ 
+ # Airtime policy support
+-CONFIG_AIRTIME_POLICY=y
++#CONFIG_AIRTIME_POLICY=y
+ 
+ # Proxy ARP support
+ #CONFIG_PROXYARP=y
+diff --git a/package/network/services/uhttpd/Makefile b/package/network/services/uhttpd/Makefile
+index 8db49a5..2949f98 100644
+--- a/package/network/services/uhttpd/Makefile
++++ b/package/network/services/uhttpd/Makefile
+@@ -19,7 +19,7 @@ PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
+ PKG_LICENSE:=ISC
+ 
+ PKG_ASLR_PIE_REGULAR:=1
+-PKG_BUILD_DEPENDS = ustream-ssl
++CMAKE_OPTIONS += -DTLS_SUPPORT=OFF
+ 
+ include $(INCLUDE_DIR)/package.mk
+ include $(INCLUDE_DIR)/cmake.mk
+diff --git a/target/linux/malta/Makefile b/target/linux/malta/Makefile
+index 319e065..8bfe106 100644
+--- a/target/linux/malta/Makefile
++++ b/target/linux/malta/Makefile
+@@ -14,6 +14,6 @@ KERNEL_PATCHVER:=6.6
+ 
+ include $(INCLUDE_DIR)/target.mk
+ 
+-DEFAULT_PACKAGES += wpad-basic-mbedtls kmod-mac80211-hwsim kmod-pcnet32 mkf2fs e2fsprogs
++DEFAULT_PACKAGES += kmod-mac80211-hwsim kmod-pcnet32
+ 
+ $(eval $(call BuildTarget))
+diff --git a/target/linux/malta/be/config-default b/target/linux/malta/be/config-default
+index 0e7faa0..459dfba 100644
+--- a/target/linux/malta/be/config-default
++++ b/target/linux/malta/be/config-default
+@@ -1,3 +1,8 @@
+ CONFIG_CPU_BIG_ENDIAN=y
+ CONFIG_CPU_MIPS32_R2=y
+ CONFIG_HIGHMEM=y
++# Same overlay-related options as the TL-WR740N kernel (../build/kernel-trim.config): xattrs on, no ACLs or security labels
++CONFIG_JFFS2_FS_XATTR=y
++CONFIG_TMPFS_XATTR=y
++# Test only: block2mtd, so tests.sh can put a JFFS2 overlay upper layer on an IDE disk
++CONFIG_MTD_BLOCK2MTD=y

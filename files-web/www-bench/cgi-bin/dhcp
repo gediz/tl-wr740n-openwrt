@@ -1,0 +1,12 @@
+#!/bin/sh
+. /usr/lib/benchweb.sh
+st() { [ "$(uci -q get dhcp.lan.ignore)" = 1 ] && echo off || echo on; }
+[ "$REQUEST_METHOD" = GET ] && ok "{\"dhcp\":\"$(st)\"}"
+need POST; form
+case "$(arg action)" in on) ;; off) ;; *) bad action;; esac
+lock
+if [ "$(arg action)" = off ]; then uci set dhcp.lan.ignore=1; else uci -q delete dhcp.lan.ignore; fi
+uci commit dhcp
+/etc/init.d/dnsmasq reload >/dev/null 2>&1
+audit "action=$(arg action)"
+ok "{\"ok\":true,\"dhcp\":\"$(st)\"}"

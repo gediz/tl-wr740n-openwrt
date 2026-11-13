@@ -1,0 +1,6 @@
+#!/bin/sh
+. /usr/lib/benchweb.sh
+need GET
+# dnsmasq lease file: expiry mac ip hostname clientid
+ok "[$(awk '{gsub(/[^0-9a-f:]/, "", $2); gsub(/[^0-9.]/, "", $3); gsub(/[^A-Za-z0-9._-]/, "", $4)
+	printf "%s{\"expiry\":%d,\"mac\":\"%s\",\"ip\":\"%s\",\"hostname\":\"%s\"}", (NR > 1 ? "," : ""), $1, $2, $3, $4}' /tmp/dhcp.leases 2>/dev/null)]"

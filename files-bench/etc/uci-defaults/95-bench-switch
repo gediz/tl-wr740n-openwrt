@@ -1,0 +1,25 @@
+#!/bin/sh
+# F2: a network config made without board_name bridges plain eth0 and has no switch section, so the
+# cable LAN is dead. Move it to the layout config_generate writes for board.json. No-op otherwise.
+uci -q get network.@switch[0] >/dev/null && exit 0
+. /usr/share/libubox/jshn.sh
+json_init
+json_load "$(cat /etc/board.json)" 2>/dev/null || exit 0
+json_get_keys sw switch
+[ -n "$sw" ] && json_select network && json_select lan || exit 0
+json_get_var d device
+json_get_values p ports
+json_select ..
+json_select ..
+p=${p:-$d}
+e=${d%.*}
+[ "$e" != "$d" ] || exit 0
+b=$(uci show network | sed -n "s/^network\.\([^.]*\)\.name='br-lan'$/\1/p")
+case " $(uci -q get network.$b.ports) " in *" $e "*) ;; *) exit 0;; esac
+uci del_list network.$b.ports=$e
+for x in $p; do uci add_list network.$b.ports=$x; done
+eval "$(sed -n '/^generate_switch_vlans_ports()/,/^}/p;/^generate_switch()/,/^}/p' /bin/config_generate)"
+for x in $sw; do generate_switch $x >/dev/null; done
+uci commit network
+echo "bench: F2: br-lan $e to $p, switch" $sw >/dev/kmsg
+exit 0

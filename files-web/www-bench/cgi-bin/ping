@@ -1,0 +1,15 @@
+#!/bin/sh
+. /usr/lib/benchweb.sh
+need POST; form
+h=$(arg host); c=$(arg count)
+num "${c:=3}" 1 10 || bad count
+# host: IPv4 dotted quad or hostname [A-Za-z0-9.-]{1,63}, not starting with - or .
+case "$h" in ''|-*|.*|*[!A-Za-z0-9.-]*) bad host;; *[!0-9.]*) ;;
+*) echo "$h" | awk -F. '{ for (i = 1; i <= 4; i++) if ($i == "" || length($i) > 3 || $i > 255) exit 1; exit NF != 4 }' || bad host;; esac
+[ ${#h} -le 63 ] || bad host
+audit "host=$h count=$c"
+o=$(ping -q -c $c -w $((c + 3)) "$h" 2>&1)
+j=$(echo "$o" | awk -v h="$h" -v c=$c '/packet loss/ { t = $1; r = $4; sub(/% packet loss.*/, ""); l = $NF }
+	/min\/avg\/max/ { split($4, a, "/"); q = sprintf("{\"min\":%s,\"avg\":%s,\"max\":%s}", a[1], a[2], a[3]) }
+	END { if (t == "") exit 1; printf "{\"host\":\"%s\",\"count\":%d,\"transmitted\":%d,\"received\":%d,\"loss_pct\":%d,\"rtt_ms\":%s}", h, c, t, r, l, q ? q : "null" }') && ok "$j"
+bad "$(js "$(echo "$o" | tail -n 1)")"

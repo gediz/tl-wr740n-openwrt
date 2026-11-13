@@ -1,0 +1,13 @@
+#!/bin/sh
+. /usr/lib/benchweb.sh
+need GET
+# iw has connected time (iwinfo and hostapd's ubus get_clients do not)
+o=
+for i in $(aps); do
+	o="$o${o:+,}\"$i\":[$(iw dev $i station dump | awk '
+		function e() { if (m != "") printf "%s{\"mac\":\"%s\",\"signal_dbm\":%s,\"rx_mbit\":%s,\"tx_mbit\":%s,\"connected_s\":%s}", n++ ? "," : "", m, s, r, t, c }
+		/^Station/ { e(); m = $2; gsub(/[^0-9a-f:]/, "", m); s = r = t = c = "null" }
+		/^\tsignal:/ { s = $2 + 0 } /^\trx bitrate:/ { r = $3 + 0 } /^\ttx bitrate:/ { t = $3 + 0 } /^\tconnected time:/ { c = $3 + 0 }
+		END { e() }')]"
+done
+ok "{$o}"

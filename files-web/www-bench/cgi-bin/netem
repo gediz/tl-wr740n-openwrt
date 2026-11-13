@@ -1,0 +1,32 @@
+#!/bin/sh
+. /usr/lib/benchweb.sh
+[ "$REQUEST_METHOD" = GET ] && ok "$(netem_json)"
+need POST; form
+i=$(arg iface); a=$(arg action); dl=$(arg delay_ms); ls=$(arg loss_pct); t=$(arg for_s)
+case "$i" in lan|wan|wlan) ;; *) bad iface;; esac
+case "$a" in ''|set|clear) ;; *) bad action;; esac
+if [ "$a" != clear ]; then
+	num "${dl:-0}" 0 5000 || bad delay_ms
+	num "${ls:-0}" 0 100 || bad loss_pct
+	[ -z "$t" ] || num "$t" 1 86400 || bad for_s
+fi
+d=$(devs $i)
+[ -n "$d" ] || err '409 Conflict' "no device for $i"
+P=/tmp/benchweb.netem.$i
+lock
+# cancel this interface's auto-clear timer (the timer job and its sleep)
+[ -f $P ] && stop "$(cat $P)"; rm -f $P
+for x in $d; do
+	if [ "$a" = clear ]; then
+		tc qdisc del dev $x root 2>/dev/null
+	else
+		tc qdisc replace dev $x root netem delay ${dl:-0}ms loss ${ls:-0}% || err '500 Internal Server Error' tc
+	fi
+done
+if [ -n "$t" ] && [ "$a" != clear ]; then
+	clr() { for x in $d; do tc qdisc del dev $x root; done; rm -f $P; }
+	job after $t clr
+	echo $! > $P
+fi
+audit "iface=$i action=${a:-set} delay_ms=$dl loss_pct=$ls for_s=$t"
+ok "$(netem_json)"

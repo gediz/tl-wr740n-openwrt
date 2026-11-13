@@ -1,0 +1,278 @@
+diff --git a/config/Config-build.in b/config/Config-build.in
+index 1bcd2a7..43d01c2 100644
+--- a/config/Config-build.in
++++ b/config/Config-build.in
+@@ -188,7 +188,8 @@ menu "Global build settings"
+ 		  Packages can opt-out via setting PKG_BUILD_FLAGS:=no-mold
+ 
+ 	config IPV6
+-		def_bool y
++		bool "Enable IPv6 support in packages"
++		default y
+ 
+ 	comment "Stripping options"
+ 
+diff --git a/package/kernel/linux/modules/crypto.mk b/package/kernel/linux/modules/crypto.mk
+index 78c9712..c378c06 100644
+--- a/package/kernel/linux/modules/crypto.mk
++++ b/package/kernel/linux/modules/crypto.mk
+@@ -165,7 +165,7 @@ $(eval $(call KernelPackage,crypto-crc32c))
+ 
+ define KernelPackage/crypto-ctr
+   TITLE:=Counter Mode CryptoAPI module
+-  DEPENDS:=+kmod-crypto-manager +kmod-crypto-seqiv
++  DEPENDS:=+kmod-crypto-manager
+   KCONFIG:=CONFIG_CRYPTO_CTR
+   FILES:=$(LINUX_DIR)/crypto/ctr.ko
+   AUTOLOAD:=$(call AutoLoad,09,ctr)
+diff --git a/package/kernel/linux/modules/netsupport.mk b/package/kernel/linux/modules/netsupport.mk
+index 06ef823..448d55e 100644
+--- a/package/kernel/linux/modules/netsupport.mk
++++ b/package/kernel/linux/modules/netsupport.mk
+@@ -1278,7 +1278,7 @@ $(eval $(call KernelPackage,sctp-diag))
+ define KernelPackage/netem
+   SUBMENU:=$(NETWORK_SUPPORT_MENU)
+   TITLE:=Network emulation functionality
+-  DEPENDS:=+kmod-sched
++  DEPENDS:=+kmod-sched-core
+   KCONFIG:=CONFIG_NET_SCH_NETEM
+   FILES:=$(LINUX_DIR)/net/sched/sch_netem.ko
+   AUTOLOAD:=$(call AutoLoad,99,netem)
+diff --git a/package/libs/mbedtls/Makefile b/package/libs/mbedtls/Makefile
+index 1728d46..b68023a 100644
+--- a/package/libs/mbedtls/Makefile
++++ b/package/libs/mbedtls/Makefile
+@@ -133,10 +133,11 @@ endef
+ TARGET_CFLAGS := $(filter-out -O%,$(TARGET_CFLAGS))
+ 
+ CMAKE_OPTIONS += \
++	-DCMAKE_BUILD_TYPE=MinSizeRel \
+ 	-DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+ 	-DUSE_SHARED_MBEDTLS_LIBRARY:Bool=ON \
+ 	-DENABLE_TESTING:Bool=OFF \
+-	-DENABLE_PROGRAMS:Bool=ON
++	-DENABLE_PROGRAMS:Bool=OFF
+ 
+ define Build/Prepare
+        $(call Build/Prepare/Default)
+@@ -168,7 +169,7 @@ endef
+ 
+ define Package/libmbedtls/install
+ 	$(INSTALL_DIR) $(1)/usr/lib
+-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/lib*.so.* $(1)/usr/lib/
++	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libmbedcrypto.so.* $(1)/usr/lib/
+ endef
+ 
+ define Package/mbedtls-util/install
+diff --git a/package/network/config/wifi-scripts/files/lib/netifd/wireless/mac80211.sh b/package/network/config/wifi-scripts/files/lib/netifd/wireless/mac80211.sh
+index eea18e8..84fc14d 100755
+--- a/package/network/config/wifi-scripts/files/lib/netifd/wireless/mac80211.sh
++++ b/package/network/config/wifi-scripts/files/lib/netifd/wireless/mac80211.sh
+@@ -1115,7 +1115,7 @@ drv_mac80211_cleanup() {
+ mac80211_reset_config() {
+ 	hostapd_conf_file="/var/run/hostapd-$phy$vif_phy_suffix.conf"
+ 	ubus_call hostapd config_set '{ "phy": "'"$phy"'", "radio": '"$radio"', "config": "", "prev_config": "'"$hostapd_conf_file"'" }' > /dev/null
+-	ubus_call wpa_supplicant config_set '{ "phy": "'"$phy"'", "radio": '"$radio"', "config": [] }' > /dev/null
++	[ -x /usr/sbin/wpa_supplicant ] && ubus_call wpa_supplicant config_set '{ "phy": "'"$phy"'", "radio": '"$radio"', "config": [] }' > /dev/null
+ 	wdev_tool "$phy$phy_suffix" set_config '{}'
+ }
+ 
+diff --git a/package/network/services/dnsmasq/Makefile b/package/network/services/dnsmasq/Makefile
+index 19ae7b7..c47b47b 100644
+--- a/package/network/services/dnsmasq/Makefile
++++ b/package/network/services/dnsmasq/Makefile
+@@ -155,7 +155,7 @@ ifeq ($(BUILD_VARIANT),full)
+ 		$(if $(CONFIG_PACKAGE_dnsmasq_$(BUILD_VARIANT)_tftp),,-DNO_TFTP)
+ 	COPTS += $(if $(CONFIG_LIBNETTLE_MINI),-DNO_GMP,)
+ else
+-	COPTS += -DNO_AUTH -DNO_IPSET -DNO_ID
++	COPTS += -DNO_AUTH -DNO_IPSET -DNO_ID -DNO_TFTP -DNO_LOOP -DNO_INOTIFY -DNO_DUMPFILE
+ endif
+ 
+ MAKE_FLAGS := \
+diff --git a/package/network/services/hostapd/Makefile b/package/network/services/hostapd/Makefile
+index e921b07..33510b2 100644
+--- a/package/network/services/hostapd/Makefile
++++ b/package/network/services/hostapd/Makefile
+@@ -92,12 +92,12 @@ CORE_DEPENDS = +ucode +libucode \
+ OPENSSL_DEPENDS = +PACKAGE_$(1):libopenssl +PACKAGE_$(1):libopenssl-legacy
+ 
+ DRIVER_MAKEOPTS= \
+-	CONFIG_ACS=y CONFIG_DRIVER_NL80211=y \
++	CONFIG_DRIVER_NL80211=y \
+ 	CONFIG_IEEE80211AC=$(HOSTAPD_IEEE80211AC) \
+ 	CONFIG_IEEE80211AX=$(HOSTAPD_IEEE80211AX) \
+ 	CONFIG_IEEE80211BE=$(HOSTAPD_IEEE80211BE) \
+ 	CONFIG_MBO=$(CONFIG_WPA_MBO_SUPPORT) \
+-	CONFIG_UCODE=y CONFIG_APUP=y
++	CONFIG_UCODE=y
+ 
+ ifeq ($(SSL_VARIANT),openssl)
+   DRIVER_MAKEOPTS += CONFIG_TLS=openssl CONFIG_SAE=y
+@@ -131,7 +131,7 @@ endif
+ 
+ ifeq ($(SSL_VARIANT),mbedtls)
+   DRIVER_MAKEOPTS += CONFIG_TLS=mbedtls CONFIG_SAE=y
+-  TARGET_LDFLAGS += -lmbedcrypto -lmbedx509 -lmbedtls
++  TARGET_LDFLAGS += -lmbedcrypto
+ 
+   ifeq ($(LOCAL_VARIANT),basic)
+     DRIVER_MAKEOPTS += CONFIG_OWE=y
+diff --git a/package/network/services/hostapd/files/hostapd-basic.config b/package/network/services/hostapd/files/hostapd-basic.config
+index 3d19d8f..ebcebff 100644
+--- a/package/network/services/hostapd/files/hostapd-basic.config
++++ b/package/network/services/hostapd/files/hostapd-basic.config
+@@ -13,7 +13,7 @@
+ #CONFIG_DRIVER_HOSTAP=y
+ 
+ # Driver interface for wired authenticator
+-CONFIG_DRIVER_WIRED=y
++#CONFIG_DRIVER_WIRED=y
+ 
+ # Driver interface for drivers using the nl80211 kernel interface
+ CONFIG_DRIVER_NL80211=y
+@@ -48,7 +48,7 @@ CONFIG_DRIVER_NL80211=y
+ #CONFIG_IAPP=y
+ 
+ # WPA2/IEEE 802.11i RSN pre-authentication
+-CONFIG_RSN_PREAUTH=y
++#CONFIG_RSN_PREAUTH=y
+ 
+ # IEEE 802.11w (management frame protection)
+ #CONFIG_IEEE80211W=y
+@@ -384,7 +384,7 @@ CONFIG_TLS=internal
+ #CONFIG_OWE=y
+ 
+ # Airtime policy support
+-CONFIG_AIRTIME_POLICY=y
++#CONFIG_AIRTIME_POLICY=y
+ 
+ # Proxy ARP support
+ #CONFIG_PROXYARP=y
+diff --git a/package/network/services/uhttpd/Makefile b/package/network/services/uhttpd/Makefile
+index 8db49a5..2949f98 100644
+--- a/package/network/services/uhttpd/Makefile
++++ b/package/network/services/uhttpd/Makefile
+@@ -19,7 +19,7 @@ PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
+ PKG_LICENSE:=ISC
+ 
+ PKG_ASLR_PIE_REGULAR:=1
+-PKG_BUILD_DEPENDS = ustream-ssl
++CMAKE_OPTIONS += -DTLS_SUPPORT=OFF
+ 
+ include $(INCLUDE_DIR)/package.mk
+ include $(INCLUDE_DIR)/cmake.mk
+diff --git a/target/linux/ath79/tiny/config-default b/target/linux/ath79/tiny/config-default
+index 38fbe1b..4275ee3 100644
+--- a/target/linux/ath79/tiny/config-default
++++ b/target/linux/ath79/tiny/config-default
+@@ -6,3 +6,109 @@ CONFIG_NVMEM_SYSFS=y
+ CONFIG_NVMEM_U_BOOT_ENV=y
+ CONFIG_PHYLINK=y
+ CONFIG_REGULATOR_FIXED_VOLTAGE=y
++# ---- kernel-trim.config: appended to target/linux/ath79/tiny/config-default ----
++# Core / memory
++# CONFIG_SYSVIPC is not set
++# CONFIG_BPF_SYSCALL is not set
++# CONFIG_BPF_JIT is not set
++# CONFIG_ADVISE_SYSCALLS is not set
++# CONFIG_BASE_FULL is not set
++# CONFIG_SYMBOLIC_ERRNAME is not set
++# CONFIG_SYSCTL_EXCEPTION_TRACE is not set
++# CONFIG_LRU_GEN is not set
++CONFIG_SLUB_TINY=y
++# CONFIG_SLAB_FREELIST_RANDOM is not set
++# CONFIG_SLAB_FREELIST_HARDENED is not set
++# CONFIG_HARDENED_USERCOPY is not set
++# CONFIG_FORTIFY_SOURCE is not set
++# CONFIG_LIST_HARDENED is not set
++# CONFIG_SCHED_STACK_END_CHECK is not set
++# CONFIG_EARLY_PRINTK is not set
++# CONFIG_RUNTIME_TESTING_MENU is not set
++# CONFIG_UEVENT_HELPER is not set
++# CONFIG_FW_LOADER_USER_HELPER is not set
++# CONFIG_ALLOW_DEV_COREDUMP is not set
++# CONFIG_DEVPORT is not set
++# CONFIG_ISDN is not set
++# CONFIG_STAGING is not set
++# Block / partitions (squashfs on mtdblock still needs BLOCK)
++CONFIG_PARTITION_ADVANCED=y
++# CONFIG_MSDOS_PARTITION is not set
++# CONFIG_EFI_PARTITION is not set
++# CONFIG_OF_PARTITION is not set
++# CONFIG_SCSI_MOD is not set
++# Bus: no PCI / USB on AR9331 board
++# CONFIG_PCI is not set
++# CONFIG_PCI_AR71XX is not set
++# CONFIG_PCI_AR724X is not set
++# CONFIG_USB_SUPPORT is not set
++# Networking
++# CONFIG_AF_UNIX_OOB is not set
++# CONFIG_IP_ADVANCED_ROUTER is not set
++# CONFIG_IP_MULTIPLE_TABLES is not set
++# CONFIG_IP_ROUTE_MULTIPATH is not set
++# CONFIG_IP_ROUTE_VERBOSE is not set
++# CONFIG_IP_MROUTE is not set
++# CONFIG_TCP_CONG_ADVANCED is not set
++# CONFIG_NETFILTER is not set
++# CONFIG_BRIDGE_IGMP_SNOOPING is not set
++# CONFIG_NET_SWITCHDEV is not set
++# CONFIG_NET_DEVLINK is not set
++# CONFIG_NET_RX_BUSY_POLL is not set
++# CONFIG_NET_SELFTESTS is not set
++# CONFIG_RFKILL is not set
++# CONFIG_TEXTSEARCH is not set
++# Ethernet / PHY: AR9331 builtin switch (qca,ar7240sw) needs AR8216_PHY + swconfig
++# CONFIG_AG71XX_LEGACY_DEBUG_FS is not set
++CONFIG_AR8216_PHY=y
++# CONFIG_AR8216_PHY_LEDS is not set
++# CONFIG_AT803X_PHY is not set
++# CONFIG_QCOM_NET_PHYLIB is not set
++# CONFIG_MDIO_BITBANG is not set
++# CONFIG_MDIO_GPIO is not set
++# CONFIG_PHYLINK is not set
++# CONFIG_GRO_CELLS is not set
++# MTD: only TP-Link fw splitter + squashfs root
++# CONFIG_MTD_SPLIT_SEAMA_FW is not set
++# CONFIG_MTD_SPLIT_WRGG_FW is not set
++# CONFIG_MTD_SPLIT_UIMAGE_FW is not set
++# CONFIG_MTD_SPLIT_LZMA_FW is not set
++# CONFIG_MTD_SPLIT_ELF_FW is not set
++# CONFIG_MTD_CMDLINE_PARTS is not set
++# CONFIG_MTD_PARSER_CYBERTAN is not set
++# CONFIG_MTD_CFI is not set
++# CONFIG_MTD_JEDECPROBE is not set
++# CONFIG_MTD_PHYSMAP is not set
++# CONFIG_MTD_COMPLEX_MAPPINGS is not set
++# CONFIG_MTD_VIRT_CONCAT is not set
++# Serial / SPI / GPIO (flash sits on qca,ar934x-spi: SPI_AR934X must stay on)
++# CONFIG_SERIAL_8250 is not set
++# CONFIG_SERIAL_MCTRL_GPIO is not set
++CONFIG_SPI_AR934X=y
++# CONFIG_SPI_BITBANG is not set
++# CONFIG_SPI_GPIO is not set
++# CONFIG_GPIO_74X164 is not set
++# CONFIG_GPIO_CDEV is not set
++# CONFIG_REGULATOR is not set
++# CONFIG_NVMEM_U_BOOT_ENV is not set
++# CONFIG_NVMEM_LAYOUT_U_BOOT_ENV is not set
++# LEDs: keep timer/default-on/netdev (+ mac80211/swconfig triggers)
++# CONFIG_LEDS_TRIGGER_HEARTBEAT is not set
++# CONFIG_LEDS_CLASS_MULTICOLOR is not set
++# CONFIG_LEDS_BRIGHTNESS_HW_CHANGED is not set
++# Filesystems: xattrs on so overlayfs can store whiteouts and opaque dirs (rmdir, rename, mkdir over a whiteout)
++CONFIG_JFFS2_FS_XATTR=y
++CONFIG_TMPFS_XATTR=y
++# Lib
++# CONFIG_CRC32_SLICEBY8 is not set
++CONFIG_CRC32_SARWATE=y
++# CONFIG_DEBUG_INFO is not set
++CONFIG_DEBUG_INFO_NONE=y
++# CONFIG_DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT is not set
++# Round 2
++# CONFIG_BLK_DEV_INITRD is not set
++# CONFIG_ETHTOOL_NETLINK is not set
++# CONFIG_SYN_COOKIES is not set
++CONFIG_LOG_BUF_SHIFT=14
++# Round 3
++# CONFIG_BUG is not set

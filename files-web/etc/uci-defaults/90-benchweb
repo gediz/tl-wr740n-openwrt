@@ -1,0 +1,24 @@
+#!/bin/sh
+# First boot: web UI credentials and Wi-Fi settings. Existing files (kept over sysupgrade) are not touched.
+D=/etc/benchweb
+umask 077
+mkdir -p $D
+chmod 700 $D
+rnd() { hexdump -n $1 -e "$1/1 \"%02x\"" /dev/urandom; }
+[ -s $D/password ] || rnd 12 > $D/password
+[ -s $D/httpd.conf ] || printf '/:bench:%s\n' "$(httpd -m "$(cat $D/password)")" > $D/httpd.conf
+[ -s $D/wifi.conf ] || cat > $D/wifi.conf <<X
+# Used by POST /cgi-bin/wifi. Edit, then apply a profile again.
+radio=radio0
+ssid=@WIFI_SSID@
+key=$(rnd 8)
+mobility_domain=4f57
+X
+[ -e $D/web.conf ] || cat > $D/web.conf <<X
+# min_mem_kb=6144
+# mdio_bus=*:1f
+# port_phys=0 1 2 3
+# upload_timeout_s=300
+# image_keep_s=600
+X
+exit 0

@@ -1,0 +1,20 @@
+# OpenWrt trees, build output and logs (never commit these)
+build/src/
+build/logs/
+qemu-malta/src/
+qemu-malta/logs/
+qemu-malta/images*/
+dl/
+build_dir/
+staging_dir/
+# images, dumps and keys
+*.bin
+*.img
+*.img.gz
+*.elf
+*.trx
+key-build*
+id_*
+*.pem
+*.bak*
+__pycache__/

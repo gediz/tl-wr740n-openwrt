@@ -1,0 +1,6 @@
+#!/bin/sh
+. /usr/lib/benchweb.sh
+need POST; cl; drain
+audit reboot
+hdr '200 OK'; echo '{"ok":true,"rebooting":true}'
+later reboot

@@ -1,0 +1,34 @@
+#!/bin/sh
+# First-boot defaults (they run again after each keep-settings sysupgrade).
+# The @...@ values are filled in by build/prepare-files.sh from the environment.
+# LAN @LAN_IP@/24, key-only SSH, an open Wi-Fi AP on channel 1.
+uci set network.lan.ipaddr='@LAN_IP@'
+uci set network.lan.netmask='255.255.255.0'
+uci set system.@system[0].hostname='@ROUTER_HOSTNAME@'
+uci set dropbear.@dropbear[0].PasswordAuth='off'
+uci set dropbear.@dropbear[0].RootPasswordAuth='off'
+# Wi-Fi on at first boot so the router is reachable without a cable. Open network on a fixed
+# channel (ACS is not built in). Management stays protected: SSH is key-only, the web UI has its own login.
+# radio0/default_radio0 are the names 'wifi config' gives the only radio (ath9k).
+# band and htmode are what it generates for ath9k (2g, HT20); set here so the AP does not depend on that guess.
+# The AP is wireless.bench (the web UI's section, profile open). Kept on upgrade; default_radio0 is renamed.
+if ! uci -q get wireless.bench >/dev/null; then
+uci set wireless.radio0.disabled='0'
+uci set wireless.radio0.band='2g'
+uci set wireless.radio0.htmode='HT20'
+uci set wireless.radio0.channel='1'
+uci set wireless.radio0.country='@WIFI_COUNTRY@'
+uci -q rename wireless.default_radio0=bench
+uci set wireless.bench=wifi-iface
+uci set wireless.bench.device='radio0'
+uci set wireless.bench.ssid='@WIFI_SSID@'
+uci set wireless.bench.encryption='none'
+uci set wireless.bench.network='lan'
+uci set wireless.bench.mode='ap'
+[ -d /etc/benchweb ] && echo open > /etc/benchweb/profile
+fi
+uci commit wireless
+uci commit network
+uci commit system
+uci commit dropbear
+exit 0

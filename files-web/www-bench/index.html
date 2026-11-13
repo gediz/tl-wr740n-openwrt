@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>@ROUTER_HOSTNAME@</title>
+<style>body{font:14px sans-serif;margin:1em;max-width:60em}iframe{width:100%;height:9em;border:1px solid #999}form{margin:.4em 0}</style>
+</head><body>
+<h3>@ROUTER_HOSTNAME@</h3>
+<iframe name="st" src="/cgi-bin/status"></iframe>
+<form action="/cgi-bin/status" target="st"><button>Refresh status</button></form>
+<form method="post" action="/cgi-bin/wifi" target="o">Wi-Fi <select name="profile">
+<option>off<option>open<option>wpa2<option>wpa3<option>mixed<option>ft-psk<option>ft-sae<option>owe</select>
+channel <input name="channel" size="2" placeholder="keep"> <button>Apply</button></form>
+<form method="post" action="/cgi-bin/netem" target="o">netem <select name="iface"><option>lan<option>wan<option>wlan</select>
+delay ms <input name="delay_ms" size="4" value="0"> loss % <input name="loss_pct" size="3" value="0">
+auto-clear s <input name="for_s" size="5"> <button name="action" value="set">Set</button> <button name="action" value="clear">Clear</button></form>
+<form method="post" action="/cgi-bin/port" target="o">Port <select name="port"><option>1<option>2<option>3<option>4</select>
+<button name="action" value="up">Up</button> <button name="action" value="down">Down</button></form>
+<form method="post" action="/cgi-bin/dhcp" target="o">DHCP <button name="action" value="on">On</button> <button name="action" value="off">Off</button></form>
+<form action="/cgi-bin/log" target="o">Log, last <input name="n" size="3" value="100"> lines <button>Show</button></form>
+<form target="o"><button formaction="/cgi-bin/leases">DHCP leases</button> <button formaction="/cgi-bin/clients">Wi-Fi clients</button></form>
+<form method="post" action="/cgi-bin/ping" target="o">Ping <input name="host" size="15" placeholder="IPv4 or name"> count <input name="count" size="2" value="3"> <button>Ping</button></form>
+<p><a href="/cgi-bin/backup">Download backup</a></p>
+<p>Restore backup <input type="file" id="rf"> <button onclick="up('/cgi-bin/restore','rf')">Restore and reboot</button></p>
+<p>Firmware <input type="file" id="ff"> <button onclick="up('/cgi-bin/upgrade','ff')">Upload and test</button></p>
+<form method="post" action="/cgi-bin/upgrade?confirm=1" target="o" onsubmit="return confirm('Flash the tested image?')">sha256 <input name="sha256" id="sh" size="16"> <button>Flash tested image (keep settings)</button></form>
+<form method="post" action="/cgi-bin/reset" target="o" onsubmit="return confirm('Factory reset: erase all settings and reboot?')"><input type="hidden" name="confirm" value="yes"><button>Factory reset</button></form>
+<form method="post" action="/cgi-bin/reboot" target="o" onsubmit="return confirm('Reboot?')"><button>Reboot</button></form>
+<iframe name="o"></iframe>
+<script>
+function up(u,i){var f=document.getElementById(i).files[0];if(!f)return;o.document.body.textContent='uploading...';
+fetch(u,{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:f}).then(function(r){return r.text()}).then(function(t){
+o.document.body.textContent=t;var m=/"sha256":"(\w+)"/.exec(t);if(m)document.getElementById('sh').value=m[1]})}
+if(top!=self)document.body.innerHTML='';
+</script>
+</body></html>

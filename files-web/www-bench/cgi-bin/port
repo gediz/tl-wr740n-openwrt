@@ -1,0 +1,20 @@
+#!/bin/sh
+. /usr/lib/benchweb.sh
+s=$(sw)
+if [ "$REQUEST_METHOD" = GET ]; then
+	[ -n "$s" ] || err '503 Service Unavailable' 'no switch'
+	ok "$(ports_json)"
+fi
+need POST; form
+p=$(arg port); a=$(arg action)
+case "$p" in 1|2|3|4) ;; *) bad port;; esac
+case "$a" in up) v=0x0200;; down) v=0x0800;; *) bad action;; esac
+[ -n "$s" ] || err '503 Service Unavailable' 'no switch'
+bus=$(conf web.conf mdio_bus '*:1f')
+phy=$(echo $(conf web.conf port_phys '0 1 2 3') | cut -d' ' -f$p)
+case "$phy" in [0-9]|[12][0-9]|3[01]) ;; *) err '500 Internal Server Error' 'port_phys in web.conf';; esac
+lock
+# BMCR (reg 0): bit 11 powers the PHY down; up clears it and restarts autonegotiation (bit 9)
+o=$(mdio "$bus" phy $phy raw 0 $v/0xf7ff 2>&1) || err '503 Service Unavailable' "$(js "mdio: $o")"
+audit "port=$p action=$a phy=$phy"
+ok "{\"ok\":true,\"port\":$p,\"action\":\"$a\",\"bmcr\":\"$(mdio "$bus" phy $phy raw 0 2>/dev/null)\"}"

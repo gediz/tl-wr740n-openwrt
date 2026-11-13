@@ -1,0 +1,7 @@
+#!/bin/sh
+. /usr/lib/benchweb.sh
+need GET
+audit download
+printf 'Content-Type: application/gzip\r\nContent-Disposition: attachment; filename="backup-%s-%s.tar.gz"\r\nCache-Control: no-store\r\n\r\n' \
+	"$(cat /proc/sys/kernel/hostname)" "$(date +%Y%m%d-%H%M)"
+exec sysupgrade -b -

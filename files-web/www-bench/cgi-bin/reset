@@ -1,0 +1,10 @@
+#!/bin/sh
+. /usr/lib/benchweb.sh
+need POST; form
+[ "$(arg confirm)" = yes ] || bad 'confirm=yes required'
+lock
+audit 'factory reset, rebooting'
+hdr '200 OK'; echo '{"ok":true,"resetting":true}'
+# firstboot erases the overlay; the first-boot defaults (uci-defaults) run again on the next boot
+fr() { firstboot -y && reboot; }
+later fr

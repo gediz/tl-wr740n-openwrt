@@ -1,0 +1,136 @@
+CONFIG_TARGET_ath79=y
+CONFIG_TARGET_ath79_tiny=y
+CONFIG_TARGET_ath79_tiny_DEVICE_tplink_tl-wr740n-v5=y
+# CONFIG_TARGET_ROOTFS_INITRAMFS is not set
+CONFIG_DEVEL=y
+CONFIG_TARGET_OPTIONS=y
+CONFIG_USE_MIPS16=y
+# --- hardening off (size) ---
+CONFIG_PKG_CC_STACKPROTECTOR_NONE=y
+CONFIG_KERNEL_CC_STACKPROTECTOR_NONE=y
+# CONFIG_KERNEL_STACKPROTECTOR is not set
+CONFIG_PKG_FORTIFY_SOURCE_NONE=y
+CONFIG_PKG_RELRO_NONE=y
+# CONFIG_USE_SECCOMP is not set
+# CONFIG_KERNEL_SECCOMP is not set
+# CONFIG_KERNEL_SECCOMP_FILTER is not set
+# --- IPv6 off ---
+# CONFIG_IPV6 is not set
+# --- kernel knobs ---
+# CONFIG_KERNEL_DEBUG_FS is not set
+# CONFIG_KERNEL_MAGIC_SYSRQ is not set
+# CONFIG_KERNEL_PRINTK_TIME is not set
+# CONFIG_KERNEL_IP_MROUTE is not set
+# CONFIG_KERNEL_KALLSYMS is not set
+# CONFIG_KERNEL_DEBUG_INFO is not set
+# CONFIG_KERNEL_DEBUG_KERNEL is not set
+# CONFIG_KERNEL_CRASHLOG is not set
+# CONFIG_KERNEL_SWAP is not set
+# CONFIG_KERNEL_ELF_CORE is not set
+# CONFIG_KERNEL_COREDUMP is not set
+# CONFIG_KERNEL_KEYS is not set
+# CONFIG_KERNEL_AIO is not set
+# CONFIG_KERNEL_FHANDLE is not set
+# CONFIG_KERNEL_FANOTIFY is not set
+# CONFIG_KERNEL_CGROUPS is not set
+# CONFIG_KERNEL_NAMESPACES is not set
+# --- packages removed ---
+# CONFIG_PACKAGE_ca-bundle is not set
+# CONFIG_PACKAGE_firewall4 is not set
+# CONFIG_PACKAGE_nftables-json is not set
+# CONFIG_PACKAGE_kmod-nft-offload is not set
+# CONFIG_PACKAGE_odhcp6c is not set
+# CONFIG_PACKAGE_odhcpd-ipv6only is not set
+# CONFIG_PACKAGE_opkg is not set
+# CONFIG_PACKAGE_ppp is not set
+# CONFIG_PACKAGE_ppp-mod-pppoe is not set
+# CONFIG_PACKAGE_procd-seccomp is not set
+# CONFIG_PACKAGE_procd-ujail is not set
+# CONFIG_PACKAGE_uclient-fetch is not set
+# CONFIG_PACKAGE_libustream-mbedtls is not set
+# CONFIG_PACKAGE_urngd is not set
+# CONFIG_PACKAGE_uboot-envtools is not set
+# CONFIG_PACKAGE_usign is not set
+# CONFIG_PACKAGE_openwrt-keyring is not set
+# CONFIG_PACKAGE_wpad-basic-mbedtls is not set
+CONFIG_PACKAGE_hostapd-basic-mbedtls=y
+CONFIG_PACKAGE_iw=y
+CONFIG_PACKAGE_dnsmasq=y
+CONFIG_PACKAGE_swconfig=y
+# --- wifi stack options ---
+# CONFIG_PACKAGE_MAC80211_DEBUGFS is not set
+# CONFIG_PACKAGE_MAC80211_MESH is not set
+# CONFIG_PACKAGE_ATH_DFS is not set
+# CONFIG_PACKAGE_ATH_DEBUG is not set
+# CONFIG_PACKAGE_ATH_SPECTRAL is not set
+# CONFIG_ATH9K_TX99 is not set
+# CONFIG_ATH9K_HWRNG is not set
+# CONFIG_ATH_USER_REGD is not set
+# --- dropbear ---
+CONFIG_DROPBEAR_ED25519=y
+CONFIG_DROPBEAR_CURVE25519=y
+CONFIG_DROPBEAR_CHACHA20POLY1305=y
+# CONFIG_DROPBEAR_ECC is not set
+# CONFIG_DROPBEAR_U2F is not set
+# CONFIG_DROPBEAR_DBCLIENT is not set
+# CONFIG_DROPBEAR_AGENTFORWARD is not set
+# CONFIG_DROPBEAR_ZLIB is not set
+CONFIG_DROPBEAR_SCP=y
+# CONFIG_SIGNED_PACKAGES is not set
+# CONFIG_PACKAGE_kmod-sched is not set
+CONFIG_TARGET_SQUASHFS_BLOCK_SIZE=256
+# CONFIG_PACKAGE_kmod-crypto-seqiv is not set
+# CONFIG_PACKAGE_kmod-crypto-geniv is not set
+# CONFIG_PACKAGE_kmod-crypto-rng is not set
+# CONFIG_PACKAGE_kmod-crypto-sha512 is not set
+# CONFIG_PACKAGE_kmod-crypto-sha3 is not set
+# CONFIG_PACKAGE_kmod-crypto-hmac is not set
+# CONFIG_PACKAGE_kmod-random-core is not set
+# CONFIG_WPA_MBO_SUPPORT is not set
+# CONFIG_MBEDTLS_DES_C is not set
+# CONFIG_MBEDTLS_ECP_DP_SECP384R1_ENABLED is not set
+# CONFIG_MBEDTLS_ECP_DP_SECP521R1_ENABLED is not set
+# CONFIG_MBEDTLS_ECP_DP_SECP256K1_ENABLED is not set
+# CONFIG_MBEDTLS_ECP_DP_CURVE25519_ENABLED is not set
+# CONFIG_MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED is not set
+# CONFIG_MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED is not set
+# CONFIG_MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED is not set
+# CONFIG_MBEDTLS_THREADING_C is not set
+# CONFIG_MBEDTLS_SSL_PROTO_TLS1_3 is not set
+CONFIG_BUSYBOX_CUSTOM=y
+# CONFIG_BUSYBOX_CONFIG_FEATURE_VERBOSE_USAGE is not set
+# CONFIG_BUSYBOX_CONFIG_IOCTL_HEX2STR_ERROR is not set
+# CONFIG_BUSYBOX_CONFIG_CHROOT is not set
+# CONFIG_BUSYBOX_CONFIG_CLEAR is not set
+# CONFIG_BUSYBOX_CONFIG_RESET is not set
+# CONFIG_BUSYBOX_CONFIG_RESIZE is not set
+# CONFIG_BUSYBOX_CONFIG_FEATURE_LS_COLOR is not set
+# CONFIG_BUSYBOX_CONFIG_MKSWAP is not set
+# CONFIG_BUSYBOX_CONFIG_SWAPON is not set
+# CONFIG_BUSYBOX_CONFIG_SWAPOFF is not set
+# CONFIG_BUSYBOX_CONFIG_TASKSET is not set
+# CONFIG_BUSYBOX_CONFIG_LESS is not set
+# CONFIG_BUSYBOX_CONFIG_STRINGS is not set
+# CONFIG_BUSYBOX_CONFIG_TIME is not set
+# CONFIG_BUSYBOX_CONFIG_BRCTL is not set
+# CONFIG_BUSYBOX_CONFIG_PING6 is not set
+# CONFIG_BUSYBOX_CONFIG_TRACEROUTE6 is not set
+# CONFIG_BUSYBOX_CONFIG_UDHCPC is not set
+# CONFIG_BUSYBOX_CONFIG_FEATURE_MOUNT_CIFS is not set
+# CONFIG_BUSYBOX_CONFIG_FEATURE_MOUNT_LOOP is not set
+# CONFIG_BUSYBOX_CONFIG_TRY_LOOP_CONFIGURE is not set
+# CONFIG_BUSYBOX_CONFIG_FEATURE_UDHCP_RFC3397 is not set
+CONFIG_PACKAGE_luci-base=y
+CONFIG_PACKAGE_luci-mod-admin-full=y
+CONFIG_PACKAGE_luci-theme-bootstrap=y
+CONFIG_PACKAGE_uhttpd=y
+CONFIG_PACKAGE_uhttpd-mod-ubus=y
+CONFIG_PACKAGE_rpcd-mod-rrdns=y
+# CONFIG_PACKAGE_luci-light is not set
+# CONFIG_PACKAGE_luci-app-firewall is not set
+# CONFIG_PACKAGE_luci-proto-ppp is not set
+# CONFIG_PACKAGE_firewall4 is not set
+# CONFIG_PACKAGE_libustream-mbedtls is not set
+CONFIG_BUSYBOX_CONFIG_WGET=y
+# CONFIG_BUSYBOX_CONFIG_FEATURE_WGET_STATUSBAR is not set
+CONFIG_BUSYBOX_CONFIG_FEATURE_WGET_TIMEOUT=y
