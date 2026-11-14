@@ -4,6 +4,8 @@
 # LAN @LAN_IP@/24, key-only SSH, a WPA2 AP on channel 1 (open only if built with WIFI_OPEN=1).
 uci set network.lan.ipaddr='@LAN_IP@'
 uci set network.lan.netmask='255.255.255.0'
+# wan dhcp becomes none: the image has no udhcpc ('udhcpc: not found' on every reload). Other protos stay.
+[ "$(uci -q get network.wan.proto)" = dhcp ] && uci set network.wan.proto='none'
 uci set system.@system[0].hostname='@ROUTER_HOSTNAME@'
 uci set dropbear.@dropbear[0].PasswordAuth='off'
 uci set dropbear.@dropbear[0].RootPasswordAuth='off'

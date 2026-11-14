@@ -1,0 +1,14 @@
+#!/bin/sh
+# Optional (LAN_NTP=1): time server for a LAN without internet. Busybox ntpd with -l and no peer serves
+# its own clock as stratum 1. No RTC, so sysntpd stays off at boot until a PC sets the clock and starts it
+# (tools/settime.py). Clients get the server by DHCP option 42.
+uci set system.ntp.enable_server='1'
+uci -q delete system.ntp.server
+uci set system.ntp.use_dhcp='0'
+uci set system.ntp.interface='lan'
+uci -q del_list dhcp.lan.dhcp_option='42,@LAN_IP@'
+uci add_list dhcp.lan.dhcp_option='42,@LAN_IP@'
+uci commit system
+uci commit dhcp
+/etc/init.d/sysntpd disable
+exit 0

@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: MIT
 # prepare-files.sh DEST: assemble the image's files overlay in DEST (OpenWrt's "files/" directory).
 #
-# Copies ../files-bench (first-boot defaults, SSH keys) and, unless NO_WEB=1, ../files-web (the web UI,
-# without its README), fills in the @...@ placeholders from the environment and fixes the file modes.
+# Copies ../files-bench (first-boot defaults, SSH keys), unless NO_WEB=1 ../files-web (the web UI, without
+# its README), and with LAN_NTP=1 ../files-ntp. Fills in the @...@ placeholders from the environment, refuses
+# editor backup files and fixes the file modes.
 #
 # Environment (all optional except a key):
 #   LAN_IP           LAN address of the router            default 192.168.1.1
@@ -16,6 +17,7 @@
 #   WIFI_COUNTRY     ISO country code for the radio        default US (set your own)
 #   AUTHORIZED_KEYS  file with your SSH public key(s)      default: ../files-bench/etc/dropbear/authorized_keys
 #   NO_WEB=1         leave the web UI out
+#   LAN_NTP=1        add ../files-ntp: NTP server for a LAN without internet (off by default; see README)
 #   ALLOW_NO_KEY=1   build without any SSH key (you will need failsafe to get in)
 #
 # The image allows key-only SSH, so without a key you cannot log in. That is why a missing key is an error.
@@ -48,8 +50,12 @@ rm -rf "$DEST"
 cp -a "$TOP/files-bench" "$DEST"
 if [ "${NO_WEB:-0}" != 1 ]; then
   cp -a "$TOP/files-web/." "$DEST/"
-  rm -f "$DEST/README.md"
+  rm -f "$DEST"/README.md*
 fi
+[ "${LAN_NTP:-0}" = 1 ] && cp -a "$TOP/files-ntp/." "$DEST/"
+# An editor backup in the sources would go into the image and can make it too big to build.
+junk=$(find "$DEST" \( -name '*.bak*' -o -name '*~' -o -name '*.orig' -o -name '*.swp' \))
+[ -z "$junk" ] || { echo "prepare-files: backup files in the overlay, remove them from the sources:" >&2; echo "$junk" >&2; exit 1; }
 [ -n "${AUTHORIZED_KEYS:-}" ] && cp "$AUTHORIZED_KEYS" "$DEST/etc/dropbear/authorized_keys"
 if ! grep -qE '^(ssh-|ecdsa-)' "$DEST/etc/dropbear/authorized_keys"; then
   if [ "${ALLOW_NO_KEY:-0}" = 1 ]; then
@@ -72,4 +78,4 @@ chmod -R go-w "$DEST"
 chmod 755 "$DEST" "$DEST/etc"
 chmod 700 "$DEST/etc/dropbear"
 [ -e "$DEST/etc/dropbear/authorized_keys" ] && chmod 600 "$DEST/etc/dropbear/authorized_keys"
-echo "prepare-files: $DEST (LAN $LAN_IP, hostname $ROUTER_HOSTNAME, SSID $WIFI_SSID ($WIFI_PROFILE), country $WIFI_COUNTRY, web UI $([ "${NO_WEB:-0}" = 1 ] && echo no || echo yes))"
+echo "prepare-files: $DEST (LAN $LAN_IP, hostname $ROUTER_HOSTNAME, SSID $WIFI_SSID ($WIFI_PROFILE), country $WIFI_COUNTRY, web UI $([ "${NO_WEB:-0}" = 1 ] && echo no || echo yes), LAN NTP $([ "${LAN_NTP:-0}" = 1 ] && echo yes || echo no))"

@@ -66,7 +66,7 @@ It checks size and id, makes the interface unmanaged in NetworkManager for the r
 
 1. Start the script and wait for `TFTP listening` and the `NOW:` prompt.
 2. Power off, hold WPS/RESET, power on, count to 5, let go.
-3. About 20 s later the router asks for the file; the 3.75 MiB transfer took 10 s on my unit (cable in LAN 2; other ports not tried).
+3. About 20 s later the router asks for the file; the 3.75 MiB transfer took 10 s on my unit (cable in LAN 2; other ports not tried). If the boot loader does not ask on that port, try the other LAN ports and the WAN port. After the transfer, move the cable to a LAN port if it is in WAN (only the cable, never the power): the booted image answers on LAN ports only, and the script says so when `--check-ip` is given.
 4. The script waits 150 s for erase, write and restart. Do not pull the power. On my unit the link went down and up twice in the first 45 s and OpenWrt answered ping right after the wait.
 
 After an aborted run: `./recovery-flash.sh --iface <if> --cleanup`.

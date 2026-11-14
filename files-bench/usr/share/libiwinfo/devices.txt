@@ -1,0 +1,2 @@
+# libiwinfo hardware database, cut to this board (TL-WR740N v5, AR9331 WMAC)
+"qca,ar9330-wmac"       0      0  "Atheros"  "AR9330"

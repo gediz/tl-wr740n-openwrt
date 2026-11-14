@@ -3,7 +3,7 @@
 
 A small web page and JSON API for the TL-WR740N bench router. The server is busybox httpd; everything else is POSIX sh CGI scripts that call uci, wifi, tc, swconfig, mdio, sysupgrade, logread, iw, ping and firstboot. No LuCI, uhttpd, rpcd or Lua.
 
-This directory is a files overlay, like ../files-bench. `../build/prepare-files.sh` copies it on top of files-bench (leave it out with `NO_WEB=1`) and fills in `@WIFI_SSID@` and `@WIFI_KEY@`. This README is not part of the overlay: the script deletes it after copying.
+This directory is a files overlay, like ../files-bench. `../build/prepare-files.sh` copies it on top of files-bench (leave it out with `NO_WEB=1`) and fills in `@ROUTER_HOSTNAME@`, `@WIFI_SSID@` and `@WIFI_KEY@`. This README is not part of the overlay: the script deletes it (and any `README.md*` copy) after copying, and stops on other editor backup files.
 
 ## What is in the overlay
 
@@ -13,10 +13,10 @@ This directory is a files overlay, like ../files-bench. `../build/prepare-files.
 | /etc/uci-defaults/90-benchweb | first boot: creates /etc/benchweb (mode 700) with password, httpd.conf, wifi.conf, web.conf (all 600). Existing files are kept |
 | /lib/upgrade/keep.d/benchweb | keeps /etc/benchweb/, /etc/config/ and /etc/dropbear/ in backups and over sysupgrade |
 | /usr/lib/benchweb.sh | shared helpers (client, Host and Origin checks, input checks, JSON, locking, timers) |
-| /www-bench/index.html | the page |
+| /www-bench/index.html | the page, built from ../webui (do not edit it here) |
 | /www-bench/cgi-bin/* | status, wifi, netem, port, dhcp, log, leases, clients, ping, backup, restore, upgrade, reset, reboot |
 
-Size: scripts and init files 17,827 bytes, page 3,207 bytes, uncompressed. The overlay is part of the final TL-WR740N image (../build). There, busybox httpd with these features, this overlay and the Wi-Fi lines in ../files-bench/etc/uci-defaults/99-bench together cost 12,736 bytes of rootfs. See ../docs/size-budget.md.
+Size: scripts and init files 17,827 bytes, page 17,855 bytes (before the hostname is filled in), uncompressed. The overlay is part of the final TL-WR740N image (../build). There, busybox httpd with these features, this overlay with the first 3.2 KB page and the Wi-Fi lines in ../files-bench/etc/uci-defaults/99-bench together cost 12,736 bytes of rootfs; the current page costs 5,528 bytes more. See ../docs/size-budget.md.
 
 The busybox config needs: `CONFIG_BUSYBOX_CONFIG_HTTPD`, `..._FEATURE_HTTPD_BASIC_AUTH`, `..._FEATURE_HTTPD_AUTH_MD5`, `..._FEATURE_HTTPD_CGI` (all `=y`).
 
@@ -226,7 +226,20 @@ curl $A -X POST $R/cgi-bin/reboot
 
 ### GET /
 
-The page: status in a frame, one form per action (log, leases, clients and ping included; factory reset asks for confirmation first), file inputs for restore and firmware (a few lines of JavaScript send the file as the raw body and copy the returned sha256 into the flash form). Results show in the frame at the bottom.
+The page. Its source is ../webui (`page.html`, `core.js`); `python3 ../webui/build-slim.py` minifies the CSS and JavaScript with esbuild and writes www-bench/index.html. Without esbuild it writes the page unminified, about 500 bytes more in the squashfs.
+
+It uses the API above with the same forms, fields and methods; JavaScript turns each submit into `fetch()` with the same urlencoded body and shows the reply under the form, with a "raw" toggle for the request, HTTP status and body. Uploads are raw `application/octet-stream` bodies, backup is a plain link, and the page blanks itself when framed by another site. No external resources; light and dark follow the browser.
+
+- Status as tiles: uptime, load, a memory bar, firmware and kernel, port chips, Wi-Fi and netem per interface. Auto-refresh is off by default (2, 5, 10 or 30 s), skips while the tab is hidden and never runs two requests at once.
+- Log lines coloured (benchweb, warnings, errors), leases and clients as tables, ping as one line.
+- The firmware test copies the returned sha256 into the flash form and shows when the tested image will be deleted from RAM.
+- After reboot, restore, factory reset or flash the card polls status and reports when the router is back, or that it asks for the new password after a factory reset. It gives up after 8 minutes and points to recovery.
+- Flash, restore, reboot and factory reset ask first. Port Down asks too, with a stronger warning when the port has a link, and so does a large netem delay or loss on lan or wlan without auto-clear.
+- Inputs carry the CGI limits, so the browser flags bad input before sending. The CGIs still check everything.
+
+Not in the page: flashing with `keep=0` and reading the DHCP state; both are in the API.
+
+On the router (2026-11-14) the page was served with auth (401 without), every GET endpoint returned 200 with valid JSON, ping and backup worked, and status answered over Wi-Fi too.
 
 ## Limits
 

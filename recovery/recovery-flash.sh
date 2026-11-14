@@ -218,6 +218,7 @@ fi
 say "TRANSFER DONE in $((done_at - t0)) s"
 say "The router now checks the product id, erases and writes flash, then restarts by itself."
 say ">>> Do NOT unplug the router. Waiting $WAIT_WRITE s."
+[ -n "$CHECK_IP" ] && say ">>> If the cable is in the WAN port, move it to a LAN port now (only the cable, never the power). The check after the restart needs a LAN port."
 while [ $(( $(date +%s) - done_at )) -lt "$WAIT_WRITE" ]; do
   c=$(carrier); [ "$c" != "$lc" ] && { say "link on $IF: $([ "$c" = 1 ] && echo up || echo down)"; lc=$c; }
   sleep 2

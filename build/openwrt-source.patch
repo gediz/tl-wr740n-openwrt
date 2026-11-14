@@ -276,3 +276,18 @@ index 38fbe1b..4275ee3 100644
 +CONFIG_LOG_BUF_SHIFT=14
 +# Round 3
 +# CONFIG_BUG is not set
+diff --git a/include/rootfs.mk b/include/rootfs.mk
+index e6cadc5..ad851f8 100644
+--- a/include/rootfs.mk
++++ b/include/rootfs.mk
+@@ -119,6 +119,10 @@ define prepare_rootfs
+ 		$(1)/lib/apk/db/*.post-install* \
+ 		$(1)/usr/lib/opkg/info/*.postinst* \
+ 		$(1)/usr/lib/opkg/lists/* \
++		$(1)/usr/lib/opkg/info/*.prerm \
++		$(1)/usr/lib/opkg/info/*.list \
++		$(1)/etc/opkg \
++		$(1)/usr/share/udhcpc \
+ 		$(1)/var/lock/*.lock
+ 	$(call clean_ipkg,$(1))
+ 	$(call mklibs,$(1))

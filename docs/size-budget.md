@@ -4,18 +4,42 @@
 
 The TP-Link 4Mlzma layout gives header + kernel + rootfs at most 3,670,016 bytes: the `0x3c0000` firmware area minus 256 KiB that `mktplinkfw` keeps back for the writable overlay. `mktplinkfw` counts the 512-byte header against that and rounds the kernel up to 4 bytes (`mktplinkfw.c:316-321`), so kernel + rootfs may use **3,669,504 bytes**. `build/measure.sh` prints the margin against that number.
 
-The overlay (`rootfs_data`) starts at the end of the squashfs rounded up to 4 KiB and ends at `0x3d0000`. Growing the rootfs across a 4 KiB boundary costs 4 KiB of overlay even when the image still fits. The final image's rootfs ends 62 bytes before such a boundary.
+The overlay (`rootfs_data`) starts at the end of the squashfs rounded up to 4 KiB and ends at `0x3d0000`. Growing the rootfs across a 4 KiB boundary costs 4 KiB of overlay even when the image still fits. The final image's rootfs ends at `0x37e868`, 1,944 bytes before such a boundary.
 
 ## Final image
 
 | Item | Bytes |
 |---|---|
 | Kernel (LZMA, with DTB) | 1,312,886 |
-| Rootfs (squashfs, xz, 256 KiB blocks) | 2,352,458 |
-| Margin (kernel rounded to 4 bytes) | 4,158 |
+| Rootfs (squashfs, xz, 256 KiB blocks) | 2,350,576 |
+| Margin (kernel rounded to 4 bytes) | 6,040 |
 | Overlay (`0x37f000` to `0x3d0000`, 4 KiB erase) | 331,776 (324 KiB) |
 
-Stock 24.10.8 defaults for this board came out at 5,193,361 bytes, about 1.5 MB over. These numbers are for the overlay values I built with; yours change the rootfs by a few bytes.
+Stock 24.10.8 defaults for this board came out at 5,193,361 bytes, about 1.5 MB over. These numbers are for the overlay values I built with; yours change the rootfs by a few bytes. `LAN_NTP=1` adds about 200 bytes (measured with the same lines in `99-bench`).
+
+## The last round: a bigger web page and a smaller rootfs
+
+The web page grew from 3.2 KB to 17.8 KB (`webui/`, the minified build). That cost 5,528 bytes of rootfs, and these files that nothing on the router reads paid for it:
+
+| Change | Saved (bytes) | Effect |
+|---|---|---|
+| opkg `*.list` files removed (`include/rootfs.mk`) | 3,770 | `sysupgrade -o` (whole-overlay backup) can no longer leave out package files. `sysupgrade -b` and the web backup do not use them |
+| libiwinfo `devices.txt` cut to the AR9330 line (`files-bench/usr/share/libiwinfo/`) | 2,608 | iwinfo would show "unknown" hardware for any other radio; this board has only that one |
+| opkg `*.prerm` scripts removed | 1,214 | none: only opkg runs them, and opkg is not in the image |
+| `/usr/share/udhcpc` removed | 520 | none: udhcpc is not in the image |
+| `/etc/opkg` removed | 136 | none |
+| Page minified (esbuild for CSS and JS, whitespace between tags) | about 500 | none: same markup and logic |
+
+Net: rootfs 2,352,458 to 2,350,576 bytes, margin 4,158 to 6,040, overlay unchanged at 324 KiB. `/usr/lib/opkg/status` and the `*.control` and `*.conffiles` files stay, because `sysupgrade -b` finds changed config files through them. The per-item numbers are single changes measured with the build's own mksquashfs, about 10 bytes of noise each.
+
+Measured and not used:
+
+| Option | Saved (bytes) | Why not |
+|---|---|---|
+| All of `/usr/lib/opkg` | 11,814 | `sysupgrade -b` and the web backup would miss changed conffiles (`/etc/passwd`, `/etc/shadow` and others) |
+| Squashfs 512 KiB blocks | 31,528 | about 1.25 MiB more RAM for squashfs caches for as long as the router runs |
+| `/etc/services`, `/etc/protocols` | 2,240 | libc port and protocol name lookups |
+| Cutting page features (icon, hints, confirms, reboot wait, tables) | under 1,000 together | not worth losing them |
 
 ## What each change saved
 
@@ -50,9 +74,9 @@ Put back later, because they were needed:
 | `BRIDGE_VLAN_FILTERING=y` | 10,026 kernel | netifd cannot create any bridge without it ([dead-lan.md](dead-lan.md)) |
 | `JFFS2_FS_XATTR`, `TMPFS_XATTR` | 5,217 kernel | without them overlayfs fails `rmdir`/`mkdir` over lower-layer dirs with EIO |
 | busybox `strings` | 524 rootfs | preinit fills `board_name` with it; without it sysupgrade refuses every image |
-| busybox httpd + web UI + Wi-Fi defaults | 12,736 rootfs | the web UI |
+| busybox httpd + web UI + Wi-Fi defaults | 12,736 rootfs | the web UI (with the first 3.2 KB page; the current page costs 5,528 more, see above) |
 
-The source changes are in `build/openwrt-source.patch`: IPv6 made selectable, kmod-crypto-ctr without seqiv, kmod-netem on sched-core, mbedtls `-Os` and libmbedcrypto only, hostapd linked to libmbedcrypto with features off, dnsmasq and uhttpd trimmed, a guard for a `wpa_supplicant` ubus call when there is no wpa_supplicant, and the kernel trim appended to `target/linux/ath79/tiny/config-default`.
+The source changes are in `build/openwrt-source.patch`: IPv6 made selectable, kmod-crypto-ctr without seqiv, kmod-netem on sched-core, mbedtls `-Os` and libmbedcrypto only, hostapd linked to libmbedcrypto with features off, dnsmasq and uhttpd trimmed, a guard for a `wpa_supplicant` ubus call when there is no wpa_supplicant, the opkg and udhcpc leftovers deleted in `include/rootfs.mk`, and the kernel trim appended to `target/linux/ath79/tiny/config-default`.
 
 ## What does not fit
 
@@ -66,7 +90,7 @@ Tried and dropped:
 | `CONFIG_USE_LTO` | does not build: MIPS16 shared objects fail with `R_MIPS16_26` relocation errors |
 | Kernel LZMA parameters | best variant saved 324 bytes |
 | Removing iwinfo | not possible: netifd's `mac80211.sh` uses it |
-| `CONFIG_BUG=y` back on | costs 54,738 bytes, more than ten times the margin |
+| `CONFIG_BUG=y` back on | costs 54,738 bytes, about nine times the margin |
 
 ## The web server
 

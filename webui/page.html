@@ -1,0 +1,120 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>@ROUTER_HOSTNAME@</title><link rel="icon" href="data:,">
+<style>
+:root{--bg:#f3f4f6;--card:#fff;--fg:#111827;--mut:#6b7280;--line:#e5e7eb;--acc:#2563eb;--ok:#15803d;--okb:#dcfce7;--warn:#b45309;--bad:#dc2626;--badb:#fef2f2;color-scheme:light dark}
+@media(prefers-color-scheme:dark){:root{--bg:#0d1117;--card:#161b22;--fg:#e6edf3;--mut:#8b949e;--line:#30363d;--acc:#388bfd;--ok:#3fb950;--okb:#12261a;--warn:#d29922;--bad:#f85149;--badb:#2a1215}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:.5em 1em;align-items:center;padding:.7em 1.2em;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:1}
+h1{font-size:1.1em;margin:0;display:flex;align-items:center;gap:.45em}
+h1 svg{width:22px;height:22px;color:var(--acc)}
+#s-ip{color:var(--mut)}
+.tools{margin-left:auto;display:flex;gap:.5em;align-items:center;color:var(--mut);font-size:.9em}
+.tools label{flex-direction:row;align-items:center;font-size:1em}
+main{max-width:76em;margin:0 auto;padding:1em;display:grid;grid-template-columns:repeat(auto-fill,minmax(22em,1fr));gap:1em}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1em 1.1em}
+.wide{grid-column:1/-1}
+h2{font-size:1em;margin:0 0 .8em;font-weight:600}
+h2 small{color:var(--mut);font-weight:400}
+h3{font-size:.75em;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 0 .3em;font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(12em,1fr));gap:1em;margin-bottom:.8em}
+.tiles b{font-size:1.3em;font-weight:600;display:block}
+small,.hint{color:var(--mut);font-size:.85em}
+.hint{margin:.2em 0 .6em}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:.5em 0 .3em}
+.bar i{display:block;height:100%;width:0;background:var(--ok)}
+.bar i[data-l=mid]{background:var(--warn)}.bar i[data-l=hi]{background:var(--bad)}
+.srow{display:flex;gap:1em;align-items:baseline;padding:.6em 0 .3em;border-top:1px solid var(--line)}
+.srow h3{width:5.5em;flex:none;margin:0}
+.chip{display:inline-block;padding:.1em .65em;border-radius:99px;background:var(--line);color:var(--mut);font-size:.85em;margin:.1em .3em .1em 0;white-space:nowrap}
+.chip.up{background:var(--okb);color:var(--ok)}
+.kv{margin-right:1.1em;white-space:nowrap}.kv em{font-style:normal;color:var(--mut);font-size:.85em}
+.nr{display:inline-block;margin-right:1.5em}.nr .k{font-weight:600;margin-right:.4em}
+.v{color:var(--mut)}.v.on{color:var(--warn);font-weight:600}
+form{display:flex;flex-wrap:wrap;gap:.5em;align-items:end;margin:0 0 .6em}
+label{display:flex;flex-direction:column;font-size:.8em;color:var(--mut);gap:.2em}
+input,select,button,.btn{font:inherit;padding:.4em .6em;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--fg)}
+input[type=number]{width:6.5em}input:user-invalid{border-color:var(--bad)}
+input[type=file]{max-width:100%;padding:.3em}
+button,.btn{background:var(--acc);border-color:var(--acc);color:#fff;cursor:pointer;font-weight:500;text-decoration:none;display:inline-block}
+button:hover,.btn:hover{filter:brightness(1.12)}button:disabled{opacity:.5;cursor:wait}
+.alt{background:transparent;color:var(--fg);border-color:var(--line)}
+.danger{background:var(--bad);border-color:var(--bad)}
+#pc form{align-items:center;margin:0 0 .35em}#pc .chip{min-width:6.5em}#pc button{padding:.2em .8em}
+.dz{border-color:var(--bad);background:linear-gradient(var(--badb),var(--card) 5em)}
+.dz h2{color:var(--bad)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(24em,100%),1fr));gap:1em 1.5em}.grid .wide form{margin-bottom:.3em}
+.sub{display:flex;flex-wrap:wrap;gap:.5em;align-items:center;margin-bottom:.6em}
+.out:empty{display:none}
+.msg{padding:.55em .75em;border-radius:8px;background:var(--bg);border-left:3px solid var(--ok);overflow-x:auto}
+.msg.err{border-color:var(--bad);background:var(--badb);color:var(--bad)}.msg.busy{border-color:var(--mut);color:var(--mut)}
+.msg.busy::before{content:"";display:inline-block;width:.8em;height:.8em;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:r .8s linear infinite;margin-right:.5em;vertical-align:-.1em}
+@keyframes r{to{transform:rotate(1turn)}}
+.raw summary{cursor:pointer;color:var(--mut);font-size:.8em;margin-top:.3em;width:max-content}
+pre{margin:.3em 0 0;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-all;max-height:24em;overflow:auto}
+.bw{color:var(--acc)}.w{color:var(--warn)}.e{color:var(--bad)}.g{color:var(--ok)}
+table{border-collapse:collapse;width:100%;font-size:.9em;margin:.3em 0}th,td{text-align:left;padding:.25em .8em .25em 0;border-bottom:1px solid var(--line)}th{color:var(--mut);font-weight:500}
+code{font:12px ui-monospace,monospace;word-break:break-all}
+.stale #status{opacity:.55}
+</style></head><body>
+<header><h1><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="13" width="20" height="8" rx="2"/><path d="M6 17h.01M10 17h.01M7 13 5 5m12 8 2-8"/></svg>@ROUTER_HOSTNAME@</h1><span id="s-ip"></span>
+<div class="tools"><span id="s-upd">loading</span><button id="rf" type="button" class="alt">Refresh</button>
+<label><input type="checkbox" id="ar"> auto</label><select id="ari"><option value="2">2 s<option value="5" selected>5 s<option value="10">10 s<option value="30">30 s</select></div></header>
+<main>
+<section id="status" class="wide">
+<div class="tiles">
+<div><h3>Uptime</h3><b id="s-uptime">-</b><small>load <span id="s-load"></span></small></div>
+<div><h3>Memory <span id="s-memp"></span></h3><div class="bar"><i id="s-membar"></i></div><small id="s-mem"></small></div>
+<div><h3>Firmware</h3><b id="s-fw" style="font-size:1em">-</b><small>kernel <span id="s-kernel"></span></small></div>
+</div>
+<div class="srow"><h3>Ports</h3><div id="s-ports"></div></div>
+<div class="srow"><h3>Wi-Fi</h3><div id="s-wifi"></div></div>
+<div class="srow"><h3>netem</h3><div id="s-netem"></div></div>
+<details class="raw"><summary>raw status</summary><pre id="s-raw"></pre></details>
+</section>
+
+<section><h2>Wi-Fi</h2>
+<form method="post" action="/cgi-bin/wifi" data-fmt="wifi">
+<label>Profile<select name="profile" id="wp"><option>off<option>open<option>wpa2<option>wpa3<option>mixed<option>ft-psk<option>ft-sae<option>owe</select></label>
+<label>Channel<input name="channel" type="number" min="1" max="13" placeholder="keep"></label>
+<button>Apply</button></form>
+<p class="hint" id="wpd"></p><div class="out"></div></section>
+
+<section><h2>Network test <small>netem</small></h2>
+<form method="post" action="/cgi-bin/netem" data-fmt="netem">
+<label>Interface<select name="iface"><option>lan<option>wan<option>wlan</select></label>
+<label>Delay ms<input name="delay_ms" type="number" min="0" max="5000" value="0"></label>
+<label>Loss %<input name="loss_pct" type="number" min="0" max="100" value="0"></label>
+<label>Auto-clear s<input name="for_s" type="number" min="1" max="86400" placeholder="never"></label>
+<button name="action" value="set">Set</button><button name="action" value="clear" class="alt" formnovalidate>Clear</button></form>
+<p class="hint">netem on lan also slows this page and SSH. Set auto-clear for anything that could lock you out.</p><div class="out"></div></section>
+
+<section><h2>Ports &amp; DHCP</h2>
+<div id="pc"></div>
+<form method="post" action="/cgi-bin/dhcp" data-fmt="dhcp" style="align-items:center;margin-top:.8em">DHCP server <button name="action" value="on">On</button><button name="action" value="off" class="alt">Off</button></form>
+<p class="hint">Port power control is not yet tested on the router.</p><div class="out"></div></section>
+
+<section class="wide"><h2>Diagnostics</h2><div class="grid">
+<div><form><button formaction="/cgi-bin/leases" data-fmt="leases">DHCP leases</button><button formaction="/cgi-bin/clients" data-fmt="clients">Wi-Fi clients</button></form><div class="out"></div></div>
+<div><form method="post" action="/cgi-bin/ping" data-fmt="ping"><label>Host<input name="host" size="15" placeholder="IPv4 or name" required pattern="[A-Za-z0-9][A-Za-z0-9.\-]{0,62}"></label><label>Count<input name="count" type="number" min="1" max="10" value="3" style="width:4.5em"></label><button>Ping</button></form><div class="out"></div></div>
+<div class="wide"><form action="/cgi-bin/log" data-fmt="log"><label>Log lines<input name="n" type="number" min="10" max="500" value="100"></label><button>Show log</button></form><div class="out"></div></div>
+</div></section>
+
+<section class="wide"><h2>Maintenance</h2><div class="grid">
+<div><h3>Backup</h3><div class="sub"><a class="btn" href="/cgi-bin/backup">Download backup</a></div><p class="hint">Holds the web password, Wi-Fi key and SSH keys: keep it private.</p><div class="out"></div></div>
+<div><h3>Firmware</h3><div class="sub"><input type="file" id="ff"><button type="button" data-up="/cgi-bin/upgrade" data-file="ff" data-fmt="up">Upload and test</button></div>
+<form method="post" action="/cgi-bin/upgrade?confirm=1" data-fmt="flash" data-confirm="Flash the tested image, keeping settings? Do not power off for about 3 minutes."><label>sha256<input name="sha256" id="sh" size="20" required pattern="[0-9a-f]{64}" placeholder="filled in by the test"></label><button class="danger">Flash tested image (keep settings)</button></form><div class="out"></div></div>
+</div></section>
+
+<section class="wide dz"><h2>Danger zone</h2><div class="grid">
+<div class="sub"><input type="file" id="bf"><button type="button" class="danger" data-up="/cgi-bin/restore" data-file="bf" data-fmt="restore" data-confirm="Restore this backup? Files under /etc are replaced and the router reboots.">Restore and reboot</button></div>
+<div class="sub"><form method="post" action="/cgi-bin/reboot" data-fmt="reboot" data-confirm="Reboot the router?"><button class="danger">Reboot</button></form>
+<form method="post" action="/cgi-bin/reset" data-fmt="reset" data-confirm="Factory reset: erase all settings and reboot? The web password, Wi-Fi key and SSH host keys change."><input type="hidden" name="confirm" value="yes"><button class="danger">Factory reset</button></form></div>
+</div><div class="out"></div></section>
+</main>
+<script>
+/*CORE*/
+</script>
+</body></html>
